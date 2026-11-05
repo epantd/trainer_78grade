@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёры по информатике</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>Тренажёры по информатике</h1>
+    <p class="app-subtitle" id="appSubtitle">Выберите класс</p>
+  </header>
+
+  <main>
+    <!-- ВЫБОР КЛАССА -->
+    <section id="screen-grades">
+      <div class="grades" id="gradeList"></div>
+    </section>
+
+    <!-- ВЫБОР ТЕМЫ -->
+    <section id="screen-topics" hidden>
+      <div id="topicList"></div>
+      <div class="actions menu-actions">
+        <button class="btn btn-outline" id="backBtn" type="button">← Выбрать другой класс</button>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
