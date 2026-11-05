@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Аппаратное обеспечение компьютера</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>🖥️ Аппаратное обеспечение компьютера</h1>
+    <p class="app-subtitle" id="appSubtitle">Выберите тему тренировки</p>
+
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ЭКРАН ВЫБОРА ТЕМЫ -->
+    <section id="screen-topics">
+      <div class="topics" id="topicList"></div>
+    </section>
+
+    <!-- ЭКРАН ЗАДАНИЯ -->
+    <section id="screen-quiz" hidden>
+      <div class="task">
+        <p class="task-topic" id="taskTopic"></p>
+        <p class="instruction" id="instruction"></p>
+        <div id="taskBody"></div>
+        <p class="feedback" id="feedback"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="checkBtn" type="button">Проверить</button>
+          <button class="btn btn-success" id="nextBtn" type="button" hidden>Далее →</button>
+          <button class="btn btn-outline" id="backBtn" type="button">← К темам</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ЭКРАН РЕЗУЛЬТАТА -->
+    <section id="screen-result" hidden>
+      <div class="task finish">
+        <div class="finish-emoji" id="finishEmoji">🎉</div>
+        <h2 id="finishTitle">Модуль пройден!</h2>
+        <p id="finishText"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Пройти заново</button>
+          <button class="btn btn-outline" id="toTopicsBtn" type="button">К темам</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
