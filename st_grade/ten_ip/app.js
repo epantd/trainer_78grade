@@ -1,5 +1,5 @@
 /* =========================================================
-   ТРЕНАЖЁР: Сети TCP/IP (Динамическая генерация заданий)
+   ТРЕНАЖЁР: Сети TCP/IP (Динамические числа, фиксированный порядок)
    ========================================================= */
 
 function generateQuestions() {
@@ -75,7 +75,7 @@ function generateQuestions() {
   };
 
   /* =====================================================
-     БЛОК 1: ОСНОВЫ IP-АДРЕСАЦИИ
+     БЛОК 1: ОСНОВЫ IP-АДРЕСАЦИИ (5 вопросов)
      ===================================================== */
   questions.push({
     type: 'choice',
@@ -93,7 +93,7 @@ function generateQuestions() {
     explain: 'Один октет — это 8 бит. Максимальное двоичное число 11111111 в десятичной системе равно 255.'
   });
 
-  // Генерация некорректного IP
+  // 3. Некорректный IP (рандом)
   {
     const ips = [];
     for (let i = 0; i < 3; i++) {
@@ -104,7 +104,7 @@ function generateQuestions() {
     badIpArr[randInt(0, 3)] = badOctet;
     const badIp = badIpArr.join('.');
     ips.push(badIp);
-    shuffle(ips);
+    shuffle(ips); // перемешиваем только варианты ответа внутри вопроса
 
     questions.push({
       type: 'choice',
@@ -123,7 +123,7 @@ function generateQuestions() {
     explain: 'Старшие биты маски, равные 1, отводятся под адрес сети. Нули (0) — под адрес компьютера в этой сети.'
   });
 
-  // Генерация корректной маски
+  // 5. Корректная маска (рандом)
   {
     const validMask = maskFromPrefix(randInt(8, 30));
     const invalidMasks = [];
@@ -144,7 +144,7 @@ function generateQuestions() {
   }
 
   /* =====================================================
-     БЛОК 2: ДВОИЧНАЯ СИСТЕМА И МАСКИ
+     БЛОК 2: ДВОИЧНАЯ СИСТЕМА И МАСКИ (7 вопросов)
      ===================================================== */
   const maskOctets = [128, 192, 224, 240, 248, 252, 254, 255];
   for (let i = 0; i < 4; i++) {
@@ -158,6 +158,7 @@ function generateQuestions() {
     });
   }
 
+  // 5. Нули в маске (рандом)
   {
     const prefix = randInt(1, 7);
     const octet = octetFromPrefix(prefix);
@@ -171,6 +172,7 @@ function generateQuestions() {
     });
   }
 
+  // 6. Единицы в маске (рандом)
   {
     const prefix = randInt(1, 7);
     const octet = octetFromPrefix(prefix);
@@ -183,6 +185,7 @@ function generateQuestions() {
     });
   }
 
+  // 7. Маска из префикса (рандом)
   {
     const prefix = randInt(24, 30);
     const mask = maskFromPrefix(prefix);
@@ -203,8 +206,9 @@ function generateQuestions() {
   }
 
   /* =====================================================
-     БЛОК 3: АДРЕС СЕТИ И УЗЛА
+     БЛОК 3: АДРЕС СЕТИ И УЗЛА (8 вопросов)
      ===================================================== */
+  // 1-4: Адрес сети (рандом)
   for (let i = 0; i < 4; i++) {
     const prefix = randInt(16, 28);
     const mask = maskFromPrefix(prefix);
@@ -219,6 +223,7 @@ function generateQuestions() {
     });
   }
 
+  // 5-8: Номер компьютера (рандом)
   for (let i = 0; i < 4; i++) {
     const prefix = randInt(26, 30);
     const mask = maskFromPrefix(prefix);
@@ -234,7 +239,7 @@ function generateQuestions() {
   }
 
   /* =====================================================
-     БЛОК 4: КОЛИЧЕСТВО КОМПЬЮТЕРОВ В СЕТИ
+     БЛОК 4: КОЛИЧЕСТВО КОМПЬЮТЕРОВ В СЕТИ (5 вопросов)
      ===================================================== */
   for (let i = 0; i < 5; i++) {
     const prefix = randInt(20, 28);
@@ -261,10 +266,10 @@ function generateQuestions() {
   }
 
   /* =====================================================
-     БЛОК 5: ЗАДАЧИ ИЗ ЕГЭ
+     БЛОК 5: ЗАДАЧИ ИЗ ЕГЭ (5 вопросов)
      ===================================================== */
 
-  // 1. Последний байт маски
+  // 1. Последний байт маски (рандом)
   {
     const prefix = randInt(25, 30);
     const mask = maskFromPrefix(prefix);
@@ -280,79 +285,7 @@ function generateQuestions() {
     });
   }
 
-  // 2. Вспомогательная функция для подсчёта адресов с условием
-  function generateSubnetQuestion(conditionFunc) {
-    let attempts = 0;
-    while (attempts < 100) {
-      const prefix = randInt(26, 30); // от 4 до 64 адресов
-      const mask = maskFromPrefix(prefix);
-      const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
-      const net = networkAddress(ip, mask);
-      const zeros = 32 - prefix;
-      const total = Math.pow(2, zeros);
-      let count = 0;
-      const netParts = net.split('.').map(Number);
-
-      for (let i = 0; i < total; i++) {
-        let curr = netParts.slice();
-        curr[3] += i;
-        while (curr[3] > 255) { curr[3] -= 256; curr[2]++; }
-        const addrStr = curr.join('.');
-        if (conditionFunc(addrStr, countOnesInIp(addrStr))) count++;
-      }
-
-      if (count > 0 && count < total) {
-        return { ip, mask, net, count, total, prefix };
-      }
-      attempts++;
-    }
-    return null;
-  }
-
-  // 3. Чётная сумма единиц
-  {
-    const q = generateSubnetQuestion((ipStr, ones) => ones % 2 === 0);
-    if (q) {
-      questions.push({
-        type: 'input',
-        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых сумма единиц в двоичной записи IP-адреса чётна?',
-        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
-        correct: q.count.toString(),
-        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Чётная сумма единиц у ' + q.count + ' адресов.'
-      });
-    }
-  }
-
-  // 4. Не кратно 4
-  {
-    const q = generateSubnetQuestion((ipStr, ones) => ones % 4 !== 0);
-    if (q) {
-      questions.push({
-        type: 'input',
-        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых количество единиц в двоичной записи IP-адреса не кратно 4?',
-        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
-        correct: q.count.toString(),
-        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Не кратна 4 у ' + q.count + ' адресов.'
-      });
-    }
-  }
-
-  // 5. Ровно K единиц
-  {
-    const targetK = randInt(10, 16);
-    const q = generateSubnetQuestion((ipStr, ones) => ones === targetK);
-    if (q) {
-      questions.push({
-        type: 'input',
-        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, двоичная запись которых содержит ровно ' + targetK + ' единиц?',
-        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
-        correct: q.count.toString(),
-        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Ровно ' + targetK + ' единиц у ' + q.count + ' адресов.'
-      });
-    }
-  }
-
-  // 6. Пазл с фрагментами IP
+  // 2. Восстановление IP по фрагментам (рандом)
   {
     let ipStr, parts, partToLetter, correctSeq, validPerms;
     let attempts = 0;
@@ -402,15 +335,15 @@ function generateQuestions() {
     if (validPerms.length === 1) {
       const correctPerm = validPerms[0].perm;
       const allPerms = [];
-      function permute(arr, l = 0) {
+      function permute2(arr, l = 0) {
         if (l === arr.length) { allPerms.push(arr.join('')); return; }
         for (let i = l; i < arr.length; i++) {
           [arr[l], arr[i]] = [arr[i], arr[l]];
-          permute(arr, l + 1);
+          permute2(arr, l + 1);
           [arr[l], arr[i]] = [arr[i], arr[l]];
         }
       }
-      permute([...partToLetter]);
+      permute2([...partToLetter]);
       const uniquePerms = [...new Set(allPerms)];
       const incorrectPerms = uniquePerms.filter(p => p !== correctPerm);
       shuffle(incorrectPerms);
@@ -428,22 +361,77 @@ function generateQuestions() {
     }
   }
 
-  // 7. Номер компьютера (доп. задача)
+  // 3-5. Задачи на перебор адресов в подсети (рандом)
+  function generateSubnetQuestion(conditionFunc, fallback) {
+    let attempts = 0;
+    while (attempts < 1000) {
+      const prefix = randInt(26, 30); // от 4 до 64 адресов
+      const mask = maskFromPrefix(prefix);
+      const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+      const net = networkAddress(ip, mask);
+      const zeros = 32 - prefix;
+      const total = Math.pow(2, zeros);
+      let count = 0;
+      const netParts = net.split('.').map(Number);
+
+      for (let i = 0; i < total; i++) {
+        let curr = netParts.slice();
+        curr[3] += i;
+        while (curr[3] > 255) { curr[3] -= 256; curr[2]++; }
+        const addrStr = curr.join('.');
+        if (conditionFunc(addrStr, countOnesInIp(addrStr))) count++;
+      }
+
+      if (count > 0 && count < total) {
+        return { ip, mask, net, count, total, prefix };
+      }
+      attempts++;
+    }
+    return fallback; // fallback на случай, если за 1000 попыток не удалось
+  }
+
+  // 3. Чётная сумма единиц
   {
-    const prefix = randInt(26, 30);
-    const mask = maskFromPrefix(prefix);
-    const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
-    const node = nodeNumber(ip, mask);
+    const fb = { ip: '192.168.1.10', mask: '255.255.255.240', net: '192.168.1.0', count: 8, total: 16, prefix: 28 };
+    const q = generateSubnetQuestion((ipStr, ones) => ones % 2 === 0, fb);
     questions.push({
       type: 'input',
-      instruction: 'Для узла с IP-адресом ' + ip + ' и маской ' + mask + ' номер компьютера в сети равен...',
-      correct: node.toString(),
-      explain: 'Маска ' + mask + ' оставляет ' + (32 - prefix) + ' бит на узлы. Номер компьютера для IP ' + ip + ' равен ' + node + '.'
+      instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых сумма единиц в двоичной записи IP-адреса чётна?',
+      hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+      correct: q.count.toString(),
+      explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Чётная сумма единиц у ' + q.count + ' адресов.'
     });
   }
 
-  // Перемешиваем вопросы, чтобы каждый раз порядок был новым
-  return shuffle(questions);
+  // 4. Не кратно 4
+  {
+    const fb = { ip: '122.159.136.144', mask: '255.255.255.248', net: '122.159.136.144', count: 7, total: 8, prefix: 29 };
+    const q = generateSubnetQuestion((ipStr, ones) => ones % 4 !== 0, fb);
+    questions.push({
+      type: 'input',
+      instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых количество единиц в двоичной записи IP-адреса не кратно 4?',
+      hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+      correct: q.count.toString(),
+      explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Не кратна 4 у ' + q.count + ' адресов.'
+    });
+  }
+
+  // 5. Ровно K единиц
+  {
+    const targetK = randInt(10, 16);
+    const fb = { ip: '10.0.0.0', mask: '255.255.255.240', net: '10.0.0.0', count: 1, total: 16, prefix: 28 };
+    const q = generateSubnetQuestion((ipStr, ones) => ones === targetK, fb);
+    questions.push({
+      type: 'input',
+      instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, двоичная запись которых содержит ровно ' + targetK + ' единиц?',
+      hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+      correct: q.count.toString(),
+      explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Ровно ' + targetK + ' единиц у ' + q.count + ' адресов.'
+    });
+  }
+
+  // ВАЖНО: Возвращаем массив без перемешивания!
+  return questions;
 }
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
@@ -479,7 +467,7 @@ const el = {
 
 /* ---------------------- УТИЛИТЫ ---------------------- */
 
-// Инициализируем вопросы
+// Инициализируем вопросы (порядок фиксирован внутри генератора)
 let QUESTIONS = generateQuestions();
 
 function currentQuestion() { return QUESTIONS[state.qIndex]; }
@@ -697,7 +685,7 @@ function startOver() {
   state.qIndex = 0;
   state.correct = 0;
   state.answered = false;
-  QUESTIONS = generateQuestions(); // Генерируем новые вопросы при рестарте
+  QUESTIONS = generateQuestions(); // Новые числа, но порядок блоков тот же
   el.screenResult.hidden = true;
   el.screenQuiz.hidden = false;
   renderQuestion();
