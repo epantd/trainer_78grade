@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Файловая система</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>📁 Файловая система</h1>
+    <p class="app-subtitle">Папки, файлы, пути и переходы между уровнями</p>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="screen-quiz">
+      <div class="task">
+        <p class="instruction" id="instruction"></p>
+        <div id="taskBody"></div>
+        <p class="feedback" id="feedback"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="checkBtn" type="button">Проверить</button>
+          <button class="btn btn-success" id="nextBtn" type="button" hidden>Далее →</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-result" hidden>
+      <div class="task finish">
+        <div class="finish-emoji" id="finishEmoji">🎉</div>
+        <h2 id="finishTitle">Модуль пройден!</h2>
+        <p id="finishText"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Пройти заново</button>
+          <button class="btn btn-outline" id="backBtn" type="button">← Назад</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
