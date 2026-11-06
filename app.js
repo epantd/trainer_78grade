@@ -23,24 +23,6 @@ const GRADES = [
         emoji: '📁',
         path: '7grade/second/file_system/index.html'
       }
-
-      /* Примеры на будущее:
-      {
-        quarter: 'III четверть',
-        title: 'Файлы и папки',
-        desc: 'Файловая система, типы файлов.',
-        emoji: '📁',
-        path: '7grade/third/files/index.html'
-      },
-      {
-        quarter: 'IV четверть',
-        title: '...',
-        desc: '...',
-        emoji: '✨',
-        path: '7grade/fourth/xxx/index.html',
-        available: false          // тема ещё не готова
-      }
-      */
     ]
   },
   {
@@ -53,6 +35,19 @@ const GRADES = [
         desc: 'Построение таблиц истинности для логических выражений.',
         emoji: '🧮',
         path: '8grade/second/truth_part1/index.html'
+      }
+    ]
+  },
+  {
+    id: 10,
+    title: '10–11 класс',
+    topics: [
+      {
+        quarter: 'II четверть',
+        title: 'Сети TCP/IP: Маски и адреса',
+        desc: 'IP-адреса, маски подсети, адрес сети и узла, задачи на количество компьютеров (подготовка к ЕГЭ).',
+        emoji: '🌐',
+        path: 'st_grade/ten_ip/index.html'
       }
     ]
   }
