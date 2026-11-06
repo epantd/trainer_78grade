@@ -1,238 +1,450 @@
 /* =========================================================
-   ТРЕНАЖЁР: Сети TCP/IP (45 заданий)
+   ТРЕНАЖЁР: Сети TCP/IP (Динамическая генерация заданий)
    ========================================================= */
 
-const QUESTIONS = [
+function generateQuestions() {
+  const questions = [];
+
+  /* ---------------------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---------------------- */
+
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const shuffle = (arr) => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const octetFromPrefix = (p) => (0xFF << (8 - p)) & 0xFF;
+
+  const maskFromPrefix = (prefix) => {
+    let parts = [];
+    let rem = prefix;
+    for (let i = 0; i < 4; i++) {
+      if (rem >= 8) { parts.push(255); rem -= 8; }
+      else if (rem > 0) { parts.push(octetFromPrefix(rem)); rem = 0; }
+      else { parts.push(0); }
+    }
+    return parts.join('.');
+  };
+
+  const networkAddress = (ip, mask) => {
+    return ip.split('.').map((o, i) => Number(o) & Number(mask.split('.')[i])).join('.');
+  };
+
+  const nodeNumber = (ip, mask) => {
+    const ipP = ip.split('.').map(Number);
+    const maskP = mask.split('.').map(Number);
+    let bin = '';
+    for (let i = 0; i < 4; i++) {
+      const o = ipP[i] & (~maskP[i] & 0xFF);
+      bin += o.toString(2).padStart(8, '0');
+    }
+    return parseInt(bin, 2);
+  };
+
+  const countOnesInIp = (ip) => {
+    return ip.split('.').map(o => Number(o).toString(2).split('1').length - 1).reduce((a, b) => a + b, 0);
+  };
+
+  const isMaskValid = (maskStr) => {
+    const parts = maskStr.split('.').map(Number);
+    let seenZero = false;
+    for (let i = 0; i < 4; i++) {
+      const o = parts[i];
+      if (o === 255) {
+        if (seenZero) return false;
+      } else if (o === 0) {
+        seenZero = true;
+      } else {
+        const binary = o.toString(2).padStart(8, '0');
+        if (!/^1+0+$/.test(binary)) return false;
+        if (seenZero) return false;
+        seenZero = true;
+      }
+    }
+    return true;
+  };
+
+  const isValidIp = (str) => {
+    const parts = str.split('.');
+    if (parts.length !== 4) return false;
+    return parts.every(p => /^\d+$/.test(p) && parseInt(p) >= 0 && parseInt(p) <= 255);
+  };
+
   /* =====================================================
      БЛОК 1: ОСНОВЫ IP-АДРЕСАЦИИ
      ===================================================== */
-  {
+  questions.push({
     type: 'choice',
     instruction: 'Из скольких байт (октетов) состоит стандартный IPv4-адрес?',
     options: ['Из 2', 'Из 4', 'Из 6', 'Из 8'],
     correct: 'Из 4',
     explain: 'IPv4-адрес состоит из 4 чисел (октетов), каждое занимает 8 бит. Итого 32 бита.'
-  },
-  {
+  });
+
+  questions.push({
     type: 'choice',
     instruction: 'Какое максимальное число можно записать в одном октете IP-адреса?',
     options: ['100', '128', '255', '256'],
     correct: '255',
     explain: 'Один октет — это 8 бит. Максимальное двоичное число 11111111 в десятичной системе равно 255.'
-  },
+  });
+
+  // Генерация некорректного IP
   {
-    type: 'choice',
-    instruction: 'Какой из этих IP-адресов записан НЕКОРРЕКТНО?',
-    options: ['192.168.1.1', '10.0.0.255', '280.240.29.3', '127.0.0.1'],
-    correct: '280.240.29.3',
-    explain: 'Число 280 больше максимально допустимого значения для октета (255).'
-  },
-  {
+    const ips = [];
+    for (let i = 0; i < 3; i++) {
+      ips.push([randInt(0, 255), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.'));
+    }
+    const badOctet = randInt(256, 300);
+    const badIpArr = [randInt(0, 255), randInt(0, 255), randInt(0, 255), randInt(0, 255)];
+    badIpArr[randInt(0, 3)] = badOctet;
+    const badIp = badIpArr.join('.');
+    ips.push(badIp);
+    shuffle(ips);
+
+    questions.push({
+      type: 'choice',
+      instruction: 'Какой из этих IP-адресов записан НЕКОРРЕКТНО?',
+      options: ips,
+      correct: badIp,
+      explain: 'Число ' + badOctet + ' больше максимально допустимого значения для октета (255).'
+    });
+  }
+
+  questions.push({
     type: 'choice',
     instruction: 'Что определяют единицы (1) в двоичной записи маски подсети?',
     options: ['Адрес узла (компьютера)', 'Адрес сети', 'Номер порта', 'Широковещательный адрес'],
     correct: 'Адрес сети',
     explain: 'Старшие биты маски, равные 1, отводятся под адрес сети. Нули (0) — под адрес компьютера в этой сети.'
-  },
+  });
+
+  // Генерация корректной маски
   {
-    type: 'choice',
-    instruction: 'Какая из перечисленных масок является корректной?',
-    options: ['255.255.0.255', '255.0.255.0', '255.255.240.0', '255.240.255.0'],
-    correct: '255.255.240.0',
-    explain: 'В корректной маске сначала всегда идут единицы, а затем нули. Запись 255.255.0.255 нарушает это правило.'
-  },
+    const validMask = maskFromPrefix(randInt(8, 30));
+    const invalidMasks = [];
+    while (invalidMasks.length < 3) {
+      const cand = [randInt(0,255), randInt(0,255), randInt(0,255), randInt(0,255)].join('.');
+      if (!isMaskValid(cand) && cand !== validMask && !invalidMasks.includes(cand)) {
+        invalidMasks.push(cand);
+      }
+    }
+    const opts = shuffle([validMask, ...invalidMasks]);
+    questions.push({
+      type: 'choice',
+      instruction: 'Какая из перечисленных масок является корректной?',
+      options: opts,
+      correct: validMask,
+      explain: 'В корректной маске сначала всегда идут единицы, а затем нули. Запись ' + invalidMasks[0] + ' нарушает это правило.'
+    });
+  }
 
   /* =====================================================
      БЛОК 2: ДВОИЧНАЯ СИСТЕМА И МАСКИ
      ===================================================== */
+  const maskOctets = [128, 192, 224, 240, 248, 252, 254, 255];
+  for (let i = 0; i < 4; i++) {
+    const val = maskOctets[randInt(0, maskOctets.length - 1)];
+    const bin = val.toString(2).padStart(8, '0');
+    questions.push({
+      type: 'input',
+      instruction: 'Переведите десятичное число ' + val + ' в двоичную систему счисления (введите только нули и единицы).',
+      correct: bin,
+      explain: val + ' = ' + bin + ' в двоичной системе.'
+    });
+  }
+
   {
-    type: 'input',
-    instruction: 'Переведите десятичное число 192 в двоичную систему счисления (введите только нули и единицы).',
-    correct: '11000000',
-    explain: '192 = 128 + 64 = 11000000 в двоичной системе.'
-  },
+    const prefix = randInt(1, 7);
+    const octet = octetFromPrefix(prefix);
+    const zeros = 8 - prefix;
+    questions.push({
+      type: 'choice',
+      instruction: 'Маска 255.255.255.' + octet + '. Сколько нулей в её двоичной записи?',
+      options: [zeros.toString(), (zeros + 1).toString(), (zeros + 2).toString(), (zeros + 3).toString()],
+      correct: zeros.toString(),
+      explain: octet + ' = ' + octet.toString(2).padStart(8, '0') + '. В последнем октете ' + zeros + ' нулей и ' + prefix + ' единиц. Всего в маске ' + zeros + ' нулей.'
+    });
+  }
+
   {
-    type: 'input',
-    instruction: 'Переведите десятичное число 224 в двоичную систему счисления.',
-    correct: '11100000',
-    explain: '224 = 128 + 64 + 32 = 11100000.'
-  },
+    const prefix = randInt(1, 7);
+    const octet = octetFromPrefix(prefix);
+    const ones = 16 + prefix;
+    questions.push({
+      type: 'input',
+      instruction: 'Сколько единиц в двоичной записи маски 255.255.' + octet + '.0?',
+      correct: ones.toString(),
+      explain: '255 (8 единиц) + 255 (8 единиц) + ' + octet + ' (' + prefix + ' единиц) = ' + ones + ' единиц.'
+    });
+  }
+
   {
-    type: 'input',
-    instruction: 'Переведите десятичное число 240 в двоичную систему счисления.',
-    correct: '11110000',
-    explain: '240 = 128 + 64 + 32 + 16 = 11110000.'
-  },
-  {
-    type: 'input',
-    instruction: 'Переведите десятичное число 248 в двоичную систему счисления.',
-    correct: '11111000',
-    explain: '248 = 128 + 64 + 32 + 16 + 8 = 11111000.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Маска 255.255.255.240. Сколько нулей в её двоичной записи?',
-    options: ['4', '8', '12', '16'],
-    correct: '4',
-    explain: '240 = 11110000. В последнем октете 4 нуля и 4 единицы. Всего в маске 4 нуля.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сколько единиц в двоичной записи маски 255.255.240.0?',
-    correct: '20',
-    explain: '255 (8 единиц) + 255 (8 единиц) + 240 (4 единицы) = 20 единиц.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Маска записана как /27. Как она выглядит в десятичном виде?',
-    options: ['255.255.255.192', '255.255.255.224', '255.255.255.240', '255.255.255.248'],
-    correct: '255.255.255.224',
-    explain: '/27 означает 27 единиц. Первые три октета (24 единицы) = 255.255.255. Остаётся 3 единицы: 11100000 = 224.'
-  },
+    const prefix = randInt(24, 30);
+    const mask = maskFromPrefix(prefix);
+    const lastOctet = mask.split('.')[3];
+    const options = shuffle([
+      mask,
+      maskFromPrefix(prefix - 1),
+      maskFromPrefix(prefix + 1),
+      maskFromPrefix(prefix - 2)
+    ]);
+    questions.push({
+      type: 'choice',
+      instruction: 'Маска записана как /' + prefix + '. Как она выглядит в десятичном виде?',
+      options: options,
+      correct: mask,
+      explain: '/' + prefix + ' означает ' + prefix + ' единиц. Первые три октета (24 единицы) = 255.255.255. Остаётся ' + (prefix - 24) + ' единицы: ' + (lastOctet || '0') + ' = ' + lastOctet + '.'
+    });
+  }
 
   /* =====================================================
      БЛОК 3: АДРЕС СЕТИ И УЗЛА
      ===================================================== */
-  {
-    type: 'input',
-    instruction: 'Найдите адрес сети для IP 192.168.1.15 с маской 255.255.255.0.',
-    hint: 'Примените операцию побитового И (умножения) к IP и маске. Там, где в маске нули, в адресе сети тоже будут нули.',
-    correct: '192.168.1.0',
-    explain: 'Последний октет IP — 15 (00001111). Маска — 0 (00000000). 15 И 0 = 0. Адрес сети: 192.168.1.0.'
-  },
-  {
-    type: 'input',
-    instruction: 'Найдите адрес сети для IP 10.5.12.3 с маской 255.0.0.0.',
-    correct: '10.0.0.0',
-    explain: 'Нули в маске обнуляют всё, начиная со второго октета. Адрес сети: 10.0.0.0.'
-  },
-  {
-    type: 'input',
-    instruction: 'Найдите адрес сети для IP 172.16.20.50 с маской 255.255.240.0.',
-    hint: 'Переведите 20 и 240 в двоичную систему и примените И.',
-    correct: '172.16.16.0',
-    explain: '20 = 00010100. 240 = 11110000. Побитовое И = 00010000 = 16. Адрес сети: 172.16.16.0.'
-  },
-  {
-    type: 'input',
-    instruction: 'Найдите адрес сети для IP 192.168.1.200 с маской 255.255.255.192.',
-    correct: '192.168.1.192',
-    explain: '200 = 11001000. 192 = 11000000. Побитовое И = 11000000 = 192. Адрес сети: 192.168.1.192.'
-  },
-  {
-    type: 'input',
-    instruction: 'Дан IP-адрес 206.158.124.67 и маска 255.255.224.0. Чему равен номер компьютера в сети (адрес узла)?',
-    hint: 'Номер компьютера — это та часть IP, которая соответствует нулям в маске. Проще всего перевести последний октет в двоичную и посмотреть на младшие биты.',
-    correct: '3',
-    explain: 'Маска 224 = 11100000. На номер узла отводятся последние 5 бит (они равны 0 в маске). 67 = 01000011. Берём последние 5 бит: 00011 = 3.'
-  },
-  {
-    type: 'input',
-    instruction: 'Дан IP-адрес 10.1.2.100 и маска 255.255.255.192. Чему равен номер компьютера в сети?',
-    correct: '36',
-    explain: '192 = 11000000. На узел отводятся 6 младших бит. 100 = 01100100. Берём последние 6 бит: 100100 = 36.'
-  },
+  for (let i = 0; i < 4; i++) {
+    const prefix = randInt(16, 28);
+    const mask = maskFromPrefix(prefix);
+    const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+    const net = networkAddress(ip, mask);
+    questions.push({
+      type: 'input',
+      instruction: 'Найдите адрес сети для IP ' + ip + ' с маской ' + mask + '.',
+      hint: 'Примените операцию побитового И к IP и маске. Там, где в маске нули, в адресе сети тоже будут нули.',
+      correct: net,
+      explain: 'IP ' + ip + ' и маска ' + mask + ' дают адрес сети ' + net + '.'
+    });
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const prefix = randInt(26, 30);
+    const mask = maskFromPrefix(prefix);
+    const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+    const node = nodeNumber(ip, mask);
+    questions.push({
+      type: 'input',
+      instruction: 'Дан IP-адрес ' + ip + ' и маска ' + mask + '. Чему равен номер компьютера в сети (адрес узла)?',
+      hint: 'Номер компьютера — это та часть IP, которая соответствует нулям в маске.',
+      correct: node.toString(),
+      explain: 'Маска ' + mask + '. На номер узла отводятся последние ' + (32 - prefix) + ' бит. IP ' + ip + ' даёт номер компьютера ' + node + '.'
+    });
+  }
 
   /* =====================================================
      БЛОК 4: КОЛИЧЕСТВО КОМПЬЮТЕРОВ В СЕТИ
      ===================================================== */
-  {
-    type: 'choice',
-    instruction: 'Сколько ВСЕГО IP-адресов (включая адрес сети и широковещательный) содержит сеть с маской 255.255.255.0?',
-    options: ['254', '255', '256', '512'],
-    correct: '256',
-    explain: 'Последний октет маски равен 0. Количество нулей = 8. Возводим 2 в 8-ю степень = 256 адресов.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Сколько КОМПЬЮТЕРОВ (узлов) можно подключить к сети с маской 255.255.255.0?',
-    options: ['254', '255', '256', '128'],
-    correct: '254',
-    explain: 'Всего адресов 256. Один забирает адрес сети (все нули), ещё один — широковещательный (все единицы). 256 - 2 = 254.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сколько всего IP-адресов (включая зарезервированные) в сети с маской 255.255.240.0?',
-    correct: '4096',
-    explain: 'Маска 240.0 — это 4 нуля в третьем октете и 8 нулей в четвёртом. Всего 12 нулей. 2^12 = 4096.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сколько всего IP-адресов (включая зарезервированные) в сети с маской 255.255.224.0?',
-    correct: '8192',
-    explain: 'Маска 224.0 — это 5 нулей в третьем октете и 8 нулей в четвёртом. Всего 13 нулей. 2^13 = 8192.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сколько КОМПЬЮТЕРОВ можно подключить к сети с маской 255.255.224.0?',
-    correct: '8190',
-    explain: 'Маска 224.0 = 5 нулей + 8 нулей = 13 нулей. 2^13 = 8192. Вычитаем адрес сети и broadcast: 8192 - 2 = 8190.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сколько КОМПЬЮТЕРОВ можно подключить к сети с маской 255.255.255.192?',
-    correct: '62',
-    explain: '192 = 11000000. 6 нулей. 2^6 = 64. 64 - 2 = 62.'
-  },
-  {
-    type: 'input',
-    instruction: 'Для некоторой подсети используется маска 255.255.255.224. Сколько различных адресов компьютеров теоретически допускает эта маска, если два адреса (адрес сети и широковещательный) не используют?',
-    correct: '30',
-    explain: '224 = 11100000. 5 нулей. 2^5 = 32. Вычитаем 2 зарезервированных: 32 - 2 = 30.'
-  },
+  for (let i = 0; i < 5; i++) {
+    const prefix = randInt(20, 28);
+    const mask = maskFromPrefix(prefix);
+    const zeros = 32 - prefix;
+    const total = Math.pow(2, zeros);
+    const computers = total - 2;
+
+    if (i % 2 === 0) {
+      questions.push({
+        type: 'input',
+        instruction: 'Сколько всего IP-адресов (включая зарезервированные) в сети с маской ' + mask + '?',
+        correct: total.toString(),
+        explain: 'Маска ' + mask + ' содержит ' + zeros + ' нулей. 2^' + zeros + ' = ' + total + '.'
+      });
+    } else {
+      questions.push({
+        type: 'input',
+        instruction: 'Сколько КОМПЬЮТЕРОВ можно подключить к сети с маской ' + mask + '?',
+        correct: computers.toString(),
+        explain: 'Маска ' + mask + ' = ' + zeros + ' нулей. 2^' + zeros + ' = ' + total + '. Вычитаем адрес сети и broadcast: ' + total + ' - 2 = ' + computers + '.'
+      });
+    }
+  }
 
   /* =====================================================
-     БЛОК 5: ЗАДАЧИ ИЗ ЕГЭ (ПО КАРТИНКАМ)
+     БЛОК 5: ЗАДАЧИ ИЗ ЕГЭ
      ===================================================== */
+
+  // 1. Последний байт маски
   {
-    type: 'input',
-    instruction: 'Для узла с IP-адресом 111.81.27.224 адрес сети равен 111.81.27.192. Чему равен последний (самый правый) байт маски?',
-    hint: 'Переведите последние октеты в двоичную систему: 224 и 192. Поймите, какая маска их объединяет.',
-    correct: '224',
-    explain: '224 = 11100000. 192 = 11000000. Чтобы из 224 получить 192, нужно применить маску 11100000 (224). Следовательно, последний байт маски — 224.'
-  },
-  {
-    type: 'input',
-    instruction: 'Узел с IP-адресом 121.96.174.205 принадлежит сети, в которой 10 IP-адресов, двоичная запись которых содержит ровно 12 единиц. Сколько единиц содержится в двоичной записи маски этой сети?',
-    hint: '10 IP-адресов означает, что под номер узла отводится 4 бита (2^4 = 16, но часть зарезервирована, или просто 16 адресов в блоке). Если 4 бита на узлы, то сколько бит на сеть?',
-    correct: '28',
-    explain: 'Сеть содержит 16 адресов (ближайшая степень двойки больше 10). Значит, под номер узла отводят 4 бита (нули в маске). Всего в маске 32 бита. 32 - 4 = 28 единиц.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сеть задана IP-адресом 192.168.32.160 и маской сети 255.255.255.240. Сколько в этой сети IP-адресов, для которых сумма единиц в двоичной записи IP-адреса чётна?',
-    hint: 'Найдите количество адресов в сети (2^4 = 16). Переберите номера компьютеров от 0 до 15 и посчитайте количество единиц.',
-    correct: '8',
-    explain: 'В сети 16 адресов. Посчитаем сумму единиц в неизменной части: 192 (2) + 168 (4) + 32 (1) + 160 (2) = 9 (нечётная). Нам нужна чётная сумма, значит номер узла (последние 4 бита) должен содержать нечётное количество единиц. Среди чисел от 0 до 15 нечётное число единиц имеют ровно 8 чисел.'
-  },
-  {
-    type: 'input',
-    instruction: 'Сеть задана IP-адресом 122.159.136.144 и маской сети 255.255.255.248. Сколько в этой сети IP-адресов, для которых количество единиц в двоичной записи IP-адреса не кратно 4?',
-    hint: 'Найдите сумму единиц в постоянной части адреса. Затем проверьте все возможные номера компьютеров.',
-    correct: '7',
-    explain: 'Маска 248 = 11111000. Под узел отводят 3 бита (8 адресов). Сумма единиц в постоянной части: 122 (6) + 159 (6) + 136 (2) + 144 (2) = 16. 16 кратно 4. Нам нужно, чтобы сумма не делилась на 4. Значит, количество единиц в номере узла не должно быть кратно 4. Единственное число от 0 до 7, дающее в сумме 16, — это 0 (000). Для него сумма 16 (кратно 4). Остальные 7 адресов дадут сумму 17, 17, 18, 17, 18, 18, 19 — ни одна не кратна 4.'
-  },
-  {
-    type: 'input',
-    instruction: 'В составе сети, которой принадлежит IP-адрес 147.222.199.75, есть узел, в IP-адресе которого первый байт совпадает с четвёртым, а второй — с третьим. Укажите наименьшее возможное количество принадлежащих этой сети IP-адресов, в двоичной записи которых ровно 14 единиц.',
-    hint: 'Найдите максимальную маску, при которой адрес 147.222.222.147 (первый=четвёртый, второй=третий) попадает в ту же сеть. Затем посчитайте комбинации.',
-    correct: '715',
-    explain: 'Максимальная маска, объединяющая 147.222.199.75 и 147.222.222.147 — это 255.255.224.0 (/19). В такой сети 13 бит на узлы. Постоянная часть 147 (4) + 222 (6) = 10 единиц. Нам нужно ровно 14 единиц, значит в номере узла должно быть 4 единицы. Количество способов выбрать 4 бита из 13 = C(13,4) = 715.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Восстановите IP-адрес из фрагментов: А = 24.12, Б = .96, В = 42., Г = .17. В ответе укажите последовательность букв.',
-    options: ['АВГБ', 'АГВБ', 'АБВГ', 'АВБГ'],
-    correct: 'АВГБ',
-    explain: 'Собираем пазл: А(24.12) + В(42.) + Г(.17) + Б(.96) = 24.12.42.17.96. Обратите внимание: в задании фрагменты могут быть с точками в начале или в конце, нужно подобрать их так, чтобы получился корректный IP-адрес без лишних точек.'
-  },
-  {
-    type: 'input',
-    instruction: 'Для узла с IP-адресом 206.158.124.67 и маской 255.255.224.0 номер компьютера в сети равен...',
-    correct: '3',
-    explain: 'Маска 224 = 11100000. Это значит, что номер компьютера — это последние 5 бит IP-адреса. 67 = 64 + 3 = 01000011. Младшие 5 бит: 00011 = 3.'
+    const prefix = randInt(25, 30);
+    const mask = maskFromPrefix(prefix);
+    const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(1, 254)].join('.');
+    const net = networkAddress(ip, mask);
+    const lastMask = mask.split('.')[3];
+    questions.push({
+      type: 'input',
+      instruction: 'Для узла с IP-адресом ' + ip + ' адрес сети равен ' + net + '. Чему равен последний (самый правый) байт маски?',
+      hint: 'Переведите последние октеты IP и сети в двоичную систему. Поймите, какая маска их объединяет.',
+      correct: lastMask,
+      explain: 'IP: ' + ip + ', сеть: ' + net + '. Последний байт маски — ' + lastMask + '.'
+    });
   }
-];
+
+  // 2. Вспомогательная функция для подсчёта адресов с условием
+  function generateSubnetQuestion(conditionFunc) {
+    let attempts = 0;
+    while (attempts < 100) {
+      const prefix = randInt(26, 30); // от 4 до 64 адресов
+      const mask = maskFromPrefix(prefix);
+      const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+      const net = networkAddress(ip, mask);
+      const zeros = 32 - prefix;
+      const total = Math.pow(2, zeros);
+      let count = 0;
+      const netParts = net.split('.').map(Number);
+
+      for (let i = 0; i < total; i++) {
+        let curr = netParts.slice();
+        curr[3] += i;
+        while (curr[3] > 255) { curr[3] -= 256; curr[2]++; }
+        const addrStr = curr.join('.');
+        if (conditionFunc(addrStr, countOnesInIp(addrStr))) count++;
+      }
+
+      if (count > 0 && count < total) {
+        return { ip, mask, net, count, total, prefix };
+      }
+      attempts++;
+    }
+    return null;
+  }
+
+  // 3. Чётная сумма единиц
+  {
+    const q = generateSubnetQuestion((ipStr, ones) => ones % 2 === 0);
+    if (q) {
+      questions.push({
+        type: 'input',
+        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых сумма единиц в двоичной записи IP-адреса чётна?',
+        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+        correct: q.count.toString(),
+        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Чётная сумма единиц у ' + q.count + ' адресов.'
+      });
+    }
+  }
+
+  // 4. Не кратно 4
+  {
+    const q = generateSubnetQuestion((ipStr, ones) => ones % 4 !== 0);
+    if (q) {
+      questions.push({
+        type: 'input',
+        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, для которых количество единиц в двоичной записи IP-адреса не кратно 4?',
+        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+        correct: q.count.toString(),
+        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Не кратна 4 у ' + q.count + ' адресов.'
+      });
+    }
+  }
+
+  // 5. Ровно K единиц
+  {
+    const targetK = randInt(10, 16);
+    const q = generateSubnetQuestion((ipStr, ones) => ones === targetK);
+    if (q) {
+      questions.push({
+        type: 'input',
+        instruction: 'Сеть задана IP-адресом ' + q.ip + ' и маской сети ' + q.mask + '. Сколько в этой сети IP-адресов, двоичная запись которых содержит ровно ' + targetK + ' единиц?',
+        hint: 'Всего адресов в сети: ' + q.total + '. Переберите все адреса и посчитайте единицы.',
+        correct: q.count.toString(),
+        explain: 'Сеть ' + q.net + '/' + q.prefix + ' содержит ' + q.total + ' адресов. Ровно ' + targetK + ' единиц у ' + q.count + ' адресов.'
+      });
+    }
+  }
+
+  // 6. Пазл с фрагментами IP
+  {
+    let ipStr, parts, partToLetter, correctSeq, validPerms;
+    let attempts = 0;
+    do {
+      attempts++;
+      ipStr = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+      const cuts = [];
+      while (cuts.length < 3) {
+        const c = randInt(1, ipStr.length - 1);
+        if (!cuts.includes(c)) cuts.push(c);
+      }
+      cuts.sort((a, b) => a - b);
+      parts = [
+        ipStr.slice(0, cuts[0]),
+        ipStr.slice(cuts[0], cuts[1]),
+        ipStr.slice(cuts[1], cuts[2]),
+        ipStr.slice(cuts[2])
+      ];
+      partToLetter = shuffle(['А', 'Б', 'В', 'Г']);
+      correctSeq = partToLetter.join('');
+
+      const allPerms = [];
+      function permute(arr, l = 0) {
+        if (l === arr.length) { allPerms.push(arr.join('')); return; }
+        for (let i = l; i < arr.length; i++) {
+          [arr[l], arr[i]] = [arr[i], arr[l]];
+          permute(arr, l + 1);
+          [arr[l], arr[i]] = [arr[i], arr[l]];
+        }
+      }
+      permute([...partToLetter]);
+      const uniquePerms = [...new Set(allPerms)];
+
+      validPerms = [];
+      for (const perm of uniquePerms) {
+        let reassembled = '';
+        for (const char of perm) {
+          const idx = partToLetter.indexOf(char);
+          reassembled += parts[idx];
+        }
+        if (isValidIp(reassembled)) {
+          validPerms.push({ perm, reassembled });
+        }
+      }
+    } while (validPerms.length !== 1 && attempts < 50);
+
+    if (validPerms.length === 1) {
+      const correctPerm = validPerms[0].perm;
+      const allPerms = [];
+      function permute(arr, l = 0) {
+        if (l === arr.length) { allPerms.push(arr.join('')); return; }
+        for (let i = l; i < arr.length; i++) {
+          [arr[l], arr[i]] = [arr[i], arr[l]];
+          permute(arr, l + 1);
+          [arr[l], arr[i]] = [arr[i], arr[l]];
+        }
+      }
+      permute([...partToLetter]);
+      const uniquePerms = [...new Set(allPerms)];
+      const incorrectPerms = uniquePerms.filter(p => p !== correctPerm);
+      shuffle(incorrectPerms);
+      const options = shuffle([correctPerm, incorrectPerms[0], incorrectPerms[1], incorrectPerms[2]]);
+
+      const fragmentDisplay = partToLetter.map((letter, i) => letter + ' = ' + parts[i]).join(', ');
+
+      questions.push({
+        type: 'choice',
+        instruction: 'Восстановите IP-адрес из фрагментов: ' + fragmentDisplay + '. В ответе укажите последовательность букв.',
+        options: options,
+        correct: correctPerm,
+        explain: 'Собираем пазл: ' + partToLetter.map((letter, i) => letter + '(' + parts[i] + ')').join(' + ') + ' = ' + ipStr + '.'
+      });
+    }
+  }
+
+  // 7. Номер компьютера (доп. задача)
+  {
+    const prefix = randInt(26, 30);
+    const mask = maskFromPrefix(prefix);
+    const ip = [randInt(1, 254), randInt(0, 255), randInt(0, 255), randInt(0, 255)].join('.');
+    const node = nodeNumber(ip, mask);
+    questions.push({
+      type: 'input',
+      instruction: 'Для узла с IP-адресом ' + ip + ' и маской ' + mask + ' номер компьютера в сети равен...',
+      correct: node.toString(),
+      explain: 'Маска ' + mask + ' оставляет ' + (32 - prefix) + ' бит на узлы. Номер компьютера для IP ' + ip + ' равен ' + node + '.'
+    });
+  }
+
+  // Перемешиваем вопросы, чтобы каждый раз порядок был новым
+  return shuffle(questions);
+}
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
 
@@ -260,14 +472,15 @@ const el = {
   finishText:   document.getElementById('finishText'),
   retryBtn:     document.getElementById('retryBtn'),
   backBtn:      document.getElementById('backBtn'),
-  
-  // Новые элементы для справки
   helpBtn:      document.getElementById('helpBtn'),
   helpModal:    document.getElementById('helpModal'),
   closeHelpBtn: document.getElementById('closeHelpBtn')
 };
 
 /* ---------------------- УТИЛИТЫ ---------------------- */
+
+// Инициализируем вопросы
+let QUESTIONS = generateQuestions();
 
 function currentQuestion() { return QUESTIONS[state.qIndex]; }
 
@@ -313,7 +526,6 @@ function renderQuestion() {
   }
 
   if (q.type === 'choice')      renderChoice(q);
-  else if (q.type === 'multi')  renderMulti(q);
   else if (q.type === 'input')  renderInput(q);
 }
 
@@ -336,32 +548,7 @@ function renderChoice(q) {
   el.taskBody.appendChild(wrap);
 }
 
-/* --- тип 2: множественный выбор --- */
-function renderMulti(q) {
-  state.selection = new Set();
-  const palette = document.createElement('div');
-  palette.className = 'palette';
-  q.options.forEach((opt) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'card';
-    chip.textContent = opt;
-    chip.addEventListener('click', () => {
-      if (state.answered) return;
-      if (state.selection.has(opt)) {
-        state.selection.delete(opt);
-        chip.classList.remove('selected');
-      } else {
-        state.selection.add(opt);
-        chip.classList.add('selected');
-      }
-    });
-    palette.appendChild(chip);
-  });
-  el.taskBody.appendChild(palette);
-}
-
-/* --- тип 3: текстовый ввод --- */
+/* --- тип 2: текстовый ввод --- */
 function renderInput(q) {
   const wrap = document.createElement('div');
   wrap.className = 'input-wrap';
@@ -404,7 +591,7 @@ function markInput(q) {
     input.classList.add('ok');
   } else {
     input.classList.add('wrong');
-    input.value = q.correct; // Показываем правильный ответ
+    input.value = q.correct;
   }
 }
 
@@ -419,13 +606,6 @@ function checkAnswer() {
     isCorrect = state.selection === q.correct;
     correctText = q.correct;
     markChoice(q);
-
-  } else if (q.type === 'multi') {
-    if (state.selection.size === 0) { setFeedback('warn', 'Выберите хотя бы один вариант.'); return; }
-    isCorrect = state.selection.size === q.correct.length &&
-                q.correct.every((v) => state.selection.has(v));
-    correctText = q.correct.join('; ');
-    markMulti(q);
 
   } else if (q.type === 'input') {
     if (!state.selection.value.trim()) { setFeedback('warn', 'Введите ответ.'); return; }
@@ -490,27 +670,23 @@ function showResult() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ---------------------- СПРАВКА (МОДАЛЬНОЕ ОКНО) ---------------------- */
+/* ---------------------- СПРАВКА ---------------------- */
 
 function openHelp() {
   el.helpModal.hidden = false;
-  document.body.style.overflow = 'hidden'; // Запрещаем прокрутку фона
+  document.body.style.overflow = 'hidden';
 }
 
 function closeHelp() {
   el.helpModal.hidden = true;
-  document.body.style.overflow = ''; // Возвращаем прокрутку
+  document.body.style.overflow = '';
 }
 
 el.helpBtn.addEventListener('click', openHelp);
 el.closeHelpBtn.addEventListener('click', closeHelp);
-
-// Закрытие по клику на затемненный фон (вне окна)
 el.helpModal.addEventListener('click', (e) => {
   if (e.target === el.helpModal) closeHelp();
 });
-
-// Закрытие по нажатию клавиши Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !el.helpModal.hidden) closeHelp();
 });
@@ -521,6 +697,7 @@ function startOver() {
   state.qIndex = 0;
   state.correct = 0;
   state.answered = false;
+  QUESTIONS = generateQuestions(); // Генерируем новые вопросы при рестарте
   el.screenResult.hidden = true;
   el.screenQuiz.hidden = false;
   renderQuestion();
