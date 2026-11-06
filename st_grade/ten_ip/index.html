@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Сети TCP/IP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <!-- Кнопка справки в правом верхнем углу -->
+    <button class="btn-help" id="helpBtn" type="button" title="Открыть шпаргалку">❓ Справка</button>
+    
+    <h1>🌐 Сети TCP/IP</h1>
+    <p class="app-subtitle">IP-адреса, маски, сети и узлы</p>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="screen-quiz">
+      <div class="task">
+        <p class="instruction" id="instruction"></p>
+        <div id="taskBody"></div>
+        <p class="feedback" id="feedback"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="checkBtn" type="button">Проверить</button>
+          <button class="btn btn-success" id="nextBtn" type="button" hidden>Далее →</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-result" hidden>
+      <div class="task finish">
+        <div class="finish-emoji" id="finishEmoji">🎉</div>
+        <h2 id="finishTitle">Модуль пройден!</h2>
+        <p id="finishText"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Пройти заново</button>
+          <button class="btn btn-outline" id="backBtn" type="button">← Назад</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО СПРАВКИ -->
+<div class="modal-overlay" id="helpModal" hidden>
+  <div class="modal-content">
+    <button class="modal-close" id="closeHelpBtn" title="Закрыть">&times;</button>
+    <h2>📖 Шпаргалка по сетям</h2>
+    
+    <div class="help-section">
+      <h3>1. IP-адрес</h3>
+      <p>Состоит из 4 чисел (октетов), разделенных точками. Каждое число от <b>0 до 255</b>.<br>
+      Пример: <code>192.168.1.10</code></p>
+    </div>
+
+    <div class="help-section">
+      <h3>2. Маска сети</h3>
+      <p>Показывает, где в IP-адресе находится <b>адрес сети</b>, а где <b>номер компьютера</b>.<br>
+      В двоичном виде маска всегда состоит сначала из единиц, а потом из нулей.<br>
+      <b>1</b> = адрес сети, <b>0</b> = адрес компьютера.</p>
+      <table class="help-table">
+        <tr><th>Маска</th><th>Двоичный вид</th><th>Нулей (для ПК)</th></tr>
+        <tr><td>255.255.255.0</td><td>...11111111.00000000</td><td>8</td></tr>
+        <tr><td>255.255.255.192</td><td>...11000000</td><td>6</td></tr>
+        <tr><td>255.255.255.224</td><td>...11100000</td><td>5</td></tr>
+        <tr><td>255.255.240.0</td><td>...11110000.00000000</td><td>12</td></tr>
+      </table>
+    </div>
+
+    <div class="help-section">
+      <h3>3. Как найти адрес сети?</h3>
+      <p>Нужно применить операцию <b>побитовое И</b> (умножение) к IP-адресу и маске. Там, где в маске стоят нули, в адресе сети тоже будут нули.</p>
+      <p><i>Пример:</i> IP 192.168.1.15 и маска 255.255.255.0.<br>
+      Последний байт IP = 15, маски = 0. 15 И 0 = 0. Адрес сети: <code>192.168.1.0</code>.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>4. Как найти номер компьютера (адрес узла)?</h3>
+      <p>Номер компьютера — это та часть IP-адреса, которая соответствует <b>нулям</b> в маске.<br>
+      <i>Пример:</i> IP 206.158.124.67, маска 255.255.224.0.<br>
+      Последний байт маски 224 = <code>11100000</code>. Значит, номер компьютера — это последние 5 бит IP.<br>
+      67 = <code>01000011</code>. Берём последние 5 бит: <code>00011</code> = 3.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>5. Сколько компьютеров в сети?</h3>
+      <p>Считаем количество нулей в маске (назовем его <b>n</b>).<br>
+      Общее количество адресов = <b>2<sup>n</sup></b>.<br>
+      Количество компьютеров = <b>2<sup>n</sup> − 2</b> (вычитаем адрес сети и широковещательный адрес).</p>
+    </div>
+
+    <div class="help-section">
+      <h3>6. Перевод чисел</h3>
+      <p>192 = 11000000<br>
+      224 = 11100000<br>
+      240 = 11110000<br>
+      248 = 11111000<br>
+      252 = 11111100<br>
+      255 = 11111111</p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
