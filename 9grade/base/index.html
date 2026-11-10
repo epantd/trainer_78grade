@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Однотабличная база данных</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <button class="btn-help" id="helpBtn" type="button" title="Открыть шпаргалку">❓ Справка</button>
+    <h1>📊 Однотабличная база данных</h1>
+    <p class="app-subtitle">Сортировка, фильтры, подсчёт и диаграммы</p>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="screen-quiz">
+      <div class="task">
+        <p class="instruction" id="instruction"></p>
+        <div id="taskBody"></div>
+        <p class="feedback" id="feedback"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="checkBtn" type="button">Проверить</button>
+          <button class="btn btn-success" id="nextBtn" type="button" hidden>Далее →</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-result" hidden>
+      <div class="task finish">
+        <div class="finish-emoji" id="finishEmoji">🎉</div>
+        <h2 id="finishTitle">Модуль пройден!</h2>
+        <p id="finishText"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Пройти заново</button>
+          <button class="btn btn-outline" id="backBtn" type="button">← Назад</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО СПРАВКИ -->
+<div class="modal-overlay" id="helpModal" hidden>
+  <div class="modal-content">
+    <button class="modal-close" id="closeHelpBtn" title="Закрыть">&times;</button>
+    <h2>📖 Шпаргалка</h2>
+    <div class="help-section">
+      <h3>Значки</h3>
+      <p><b>🫙 Фильтр:</b> оставляет строки с нужным значением.<br>
+      <b>↕ / ↑ / ↓ Сортировка:</b> упорядочивает данные.<br>
+      <b>📊 Диаграмма:</b> визуализирует числа.</p>
+    </div>
+    <div class="help-section">
+      <h3>Как пользоваться</h3>
+      <p>В заголовке столбца выберите нужное значение в выпадающем списке (это фильтр). Нажмите на стрелочки, чтобы отсортировать. Фильтры можно комбинировать.</p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
