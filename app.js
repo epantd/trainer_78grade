@@ -39,6 +39,19 @@ const GRADES = [
     ]
   },
   {
+    id: 9,
+    title: '9 класс',
+    topics: [
+      {
+        quarter: 'II четверть',
+        title: 'Однотабличные базы данных',
+        desc: 'Сортировка, фильтрация, подсчёт ячеек и построение диаграмм на основе таблиц (интерфейс как в LibreOffice Calc).',
+        emoji: '📊',
+        path: '9grade/base/index.html'
+      }
+    ]
+  },
+  {
     id: 10,
     title: '10–11 класс',
     topics: [
