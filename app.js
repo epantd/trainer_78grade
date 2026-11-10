@@ -35,6 +35,13 @@ const GRADES = [
         desc: 'Построение таблиц истинности для логических выражений.',
         emoji: '🧮',
         path: '8grade/second/truth_part1/index.html'
+      },
+      {
+        quarter: 'II четверть',
+        title: 'Таблицы истинности · часть 2',
+        desc: 'Случайные выражения с импликацией и эквивалентностью, порядок действий и таблицы истинности.',
+        emoji: '🔣',
+        path: '8grade/second/truth_part2/index.html'
       }
     ]
   },
