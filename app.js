@@ -42,6 +42,13 @@ const GRADES = [
         desc: 'Случайные выражения с импликацией и эквивалентностью, порядок действий и таблицы истинности.',
         emoji: '🔣',
         path: '8grade/second/truth_part2/index.html'
+      },
+      {
+        quarter: 'II четверть',
+        title: 'Логические высказывания',
+        desc: 'Что такое высказывание, простые и составные, отрицание.',
+        emoji: '🧠',
+        path: '8grade/second/logic/index.html'
       }
     ]
   },
