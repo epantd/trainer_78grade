@@ -1,43 +1,31 @@
 'use strict';
 
 /* ==========================================================
-   ТРЕНАЖЁР: Количество путей в графе
-   14 заданий: 4 фиксированных (2, 3, 7, 10 путей) + 10 случайных
+   ТРЕНАЖЁР: Количество путей в графе (20 заданий)
    ========================================================== */
 
-const TOTAL_TASKS = 14;
+const TOTAL_TASKS = 20;
 
-// Координаты вершин (немного разнесены по X для корректной топологической сортировки)
+// Координаты вершин (расположены слоями)
 const NODES = {
-  A: { x: 80,  y: 200 },
-  B: { x: 180, y: 100 },
-  C: { x: 200, y: 300 },
-  E: { x: 300, y: 200 }, // E теперь левее D
-  D: { x: 320, y: 120 },
-  F: { x: 340, y: 280 },
-  G: { x: 440, y: 200 }
+  'A':  { x: 60,  y: 200 },
+  'Б':  { x: 160, y: 80 },
+  'В':  { x: 160, y: 200 },
+  'Г':  { x: 160, y: 320 },
+  'Д':  { x: 280, y: 80 },
+  'Е':  { x: 280, y: 200 },
+  'Ж':  { x: 280, y: 320 },
+  'З':  { x: 400, y: 120 },
+  'И':  { x: 400, y: 280 },
+  'К':  { x: 500, y: 200 }
 };
-
-// Все возможные рёбра (из левых слоёв в правые)
-const POSSIBLE_EDGES = [
-  ['A', 'B'], ['A', 'C'], ['A', 'E'],
-  ['B', 'D'], ['B', 'E'],
-  ['C', 'E'], ['C', 'F'],
-  ['D', 'G'],
-  ['E', 'D'], ['E', 'F'], ['E', 'G'],
-  ['F', 'G']
-];
 
 // Первые 4 задания с фиксированным количеством путей
 const FIXED_GRAPHS = [
-  // 1. Всего 2 пути
-  { edges: [['A','B'], ['A','E'], ['B','E'], ['E','G']], paths: 2 },
-  // 2. Всего 3 пути
-  { edges: [['A','B'], ['A','E'], ['B','E'], ['B','G'], ['E','G']], paths: 3 },
-  // 3. Всего 7 путей
-  { edges: [['A','B'], ['A','C'], ['B','E'], ['C','E'], ['C','F'], ['E','D'], ['E','F'], ['E','G'], ['D','G'], ['F','G']], paths: 7 },
-  // 4. Всего 10 путей
-  { edges: [['A','B'], ['A','C'], ['A','E'], ['B','E'], ['C','E'], ['C','F'], ['E','D'], ['E','F'], ['E','G'], ['D','G'], ['F','G']], paths: 10 }
+  { edges: [['A','В'], ['A','Е'], ['В','Е'], ['Е','К']], paths: 2 },
+  { edges: [['A','В'], ['A','Е'], ['В','Е'], ['В','К'], ['Е','К']], paths: 3 },
+  { edges: [['A','Б'], ['A','В'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Е','Д'], ['Е','Ж'], ['Е','К'], ['Д','К'], ['Ж','К']], paths: 7 },
+  { edges: [['A','Б'], ['A','В'], ['A','Е'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Е','Д'], ['Е','Ж'], ['Е','К'], ['Д','К'], ['Ж','К']], paths: 10 }
 ];
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
@@ -46,7 +34,8 @@ const state = {
   qIndex: 0,
   correct: 0,
   answered: false,
-  currentGraph: null
+  currentGraph: null,
+  tasks: []
 };
 
 /* ---------------------- DOM ---------------------- */
@@ -69,45 +58,16 @@ const el = {
   backBtn:      document.getElementById('backBtn')
 };
 
-/* ---------------------- ГЕНЕРАЦИЯ СЛУЧАЙНОГО ГРАФА ---------------------- */
-
-function generateGraph() {
-  let edges = [];
-  let attempts = 0;
-  
-  while (attempts < 100) {
-    attempts++;
-    edges = [];
-    
-    POSSIBLE_EDGES.forEach(([u, v]) => {
-      // Добавляем с вероятностью 55%
-      if (Math.random() < 0.55 || (u === 'A' && v === 'B') || (u === 'F' && v === 'G')) {
-        edges.push([u, v]);
-      }
-    });
-
-    const paths = countPaths(edges, 'A', 'G');
-    if (paths > 0 && paths < 100) {
-      return { edges, paths };
-    }
-  }
-  
-  // Резервный вариант
-  const fallbackEdges = [['A','B'], ['A','C'], ['B','D'], ['B','E'], ['C','E'], ['C','F'], ['D','G'], ['E','G'], ['F','G']];
-  return { 
-    edges: fallbackEdges,
-    paths: countPaths(fallbackEdges, 'A', 'G')
-  };
-}
-
 /* ---------------------- АЛГОРИТМ ПОДСЧЁТА ПУТЕЙ ---------------------- */
 
 function countPaths(edges, start, end) {
+  if (start === end) return 1;
+  
   const dp = {};
   for (let node in NODES) dp[node] = 0;
   dp[start] = 1;
 
-  // Сортируем вершины слева направо (топологическая сортировка)
+  // Сортируем вершины слева направо
   const sortedNodes = Object.keys(NODES).sort((a, b) => NODES[a].x - NODES[b].x);
 
   sortedNodes.forEach(u => {
@@ -121,11 +81,151 @@ function countPaths(edges, start, end) {
   return dp[end];
 }
 
+function getIntermediateNodes(edges, start, end) {
+  const validNodes = [];
+  const allNodes = Object.keys(NODES).filter(n => n !== start && n !== end);
+  
+  allNodes.forEach(node => {
+    const p1 = countPaths(edges, start, node);
+    const p2 = countPaths(edges, node, end);
+    if (p1 > 0 && p2 > 0) {
+      validNodes.push(node);
+    }
+  });
+  
+  return validNodes;
+}
+
+/* ---------------------- ГЕНЕРАЦИЯ ГРАФОВ ---------------------- */
+
+function generateRandomEdges() {
+  const possibleEdges = [];
+  const keys = Object.keys(NODES);
+  
+  // Создаём потенциальные рёбра между слоями (слева направо)
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const u = keys[i];
+      const v = keys[j];
+      if (NODES[v].x > NODES[u].x && NODES[v].x - NODES[u].x <= 150) {
+        possibleEdges.push([u, v]);
+      }
+    }
+  }
+
+  let bestEdges = null;
+  let bestDiff = Infinity;
+  const target = 12; // Стремимся к ~12 путям (середина диапазона 4-25)
+
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const edges = [];
+    
+    possibleEdges.forEach(([u, v]) => {
+      // Вероятность появления ребра
+      if (Math.random() < 0.55) {
+        edges.push([u, v]);
+      }
+    });
+
+    const paths = countPaths(edges, 'A', 'К');
+    
+    // Если попали в желаемый диапазон (от 4 до 25) — отлично
+    if (paths >= 4 && paths <= 25) {
+      return edges;
+    }
+    
+    // Иначе запоминаем самый близкий вариант
+    if (paths > 0) {
+      const diff = Math.abs(paths - target);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestEdges = edges;
+      }
+    }
+  }
+  
+  if (bestEdges) return bestEdges;
+
+  // Резервный вариант
+  return [['A','Б'], ['A','В'], ['A','Г'], ['Б','Д'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Г','Ж'], ['Д','З'], ['Е','З'], ['Е','И'], ['Ж','И'], ['З','К'], ['И','К']];
+}
+
+/* ---------------------- ГЕНЕРАЦИЯ ЗАДАНИЙ ---------------------- */
+
+function generateTasks() {
+  const tasks = [];
+
+  // 1. Фиксированные задания (4 шт)
+  for (let i = 0; i < FIXED_GRAPHS.length; i++) {
+    tasks.push({
+      type: 'simple',
+      edges: FIXED_GRAPHS[i].edges,
+      answer: FIXED_GRAPHS[i].paths
+    });
+  }
+
+  // 2. Случайные (просто найти пути) — 8 шт
+  for (let i = 0; i < 8; i++) {
+    const edges = generateRandomEdges();
+    tasks.push({
+      type: 'simple',
+      edges: edges,
+      answer: countPaths(edges, 'A', 'К')
+    });
+  }
+
+  // 3. Случайные (проходящие через город) — 4 шт
+  for (let i = 0; i < 4; i++) {
+    let edges, intermediates, targetNode, paths;
+    do {
+      edges = generateRandomEdges();
+      intermediates = getIntermediateNodes(edges, 'A', 'К');
+    } while (intermediates.length === 0);
+
+    targetNode = intermediates[Math.floor(Math.random() * intermediates.length)];
+    const p1 = countPaths(edges, 'A', targetNode);
+    const p2 = countPaths(edges, targetNode, 'К');
+    paths = p1 * p2;
+
+    tasks.push({
+      type: 'through',
+      edges: edges,
+      targetNode: targetNode,
+      answer: paths
+    });
+  }
+
+  // 4. Случайные (НЕ проходящие через город) — 4 шт
+  for (let i = 0; i < 4; i++) {
+    let edges, intermediates, targetNode, paths;
+    do {
+      edges = generateRandomEdges();
+      intermediates = getIntermediateNodes(edges, 'A', 'К');
+    } while (intermediates.length === 0);
+
+    targetNode = intermediates[Math.floor(Math.random() * intermediates.length)];
+    const totalPaths = countPaths(edges, 'A', 'К');
+    const p1 = countPaths(edges, 'A', targetNode);
+    const p2 = countPaths(edges, targetNode, 'К');
+    const throughPaths = p1 * p2;
+    paths = totalPaths - throughPaths;
+
+    tasks.push({
+      type: 'not_through',
+      edges: edges,
+      targetNode: targetNode,
+      answer: paths
+    });
+  }
+
+  return tasks;
+}
+
 /* ---------------------- ОТРИСОВКА SVG ---------------------- */
 
 function renderGraphToSVG(edges) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 520 400');
+  svg.setAttribute('viewBox', '0 0 560 400');
   svg.setAttribute('class', 'graph-svg');
 
   // Маркер для стрелок
@@ -149,11 +249,10 @@ function renderGraphToSVG(edges) {
     const ux = dx / len;
     const uy = dy / len;
 
-    // Отступаем от центров вершин, чтобы стрелки не перекрывали кружки
-    const x1 = p1.x + ux * 5;
-    const y1 = p1.y + uy * 5;
-    const x2 = p2.x - ux * 12;
-    const y2 = p2.y - uy * 12;
+    const x1 = p1.x + ux * 6;
+    const y1 = p1.y + uy * 6;
+    const x2 = p2.x - ux * 14;
+    const y2 = p2.y - uy * 14;
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', x1);
@@ -197,6 +296,7 @@ function renderGraphToSVG(edges) {
 /* ---------------------- ЛОГИКА ЗАДАНИЯ ---------------------- */
 
 function startOver() {
+  state.tasks = generateTasks();
   state.qIndex = 0;
   state.correct = 0;
   state.answered = false;
@@ -208,21 +308,26 @@ function startOver() {
 
 function renderTask() {
   state.answered = false;
-
-  // Если задание входит в первые 4 — берём фиксированный граф
-  if (state.qIndex < FIXED_GRAPHS.length) {
-    state.currentGraph = FIXED_GRAPHS[state.qIndex];
-  } else {
-    state.currentGraph = generateGraph();
-  }
+  const task = state.tasks[state.qIndex];
+  state.currentGraph = task;
 
   el.progressText.textContent = `Задание ${state.qIndex + 1} из ${TOTAL_TASKS}`;
   el.progressFill.style.width = `${(state.qIndex / TOTAL_TASKS) * 100}%`;
 
-  el.instruction.textContent = 'На рисунке — схема дорог, связывающих города. По каждой дороге можно двигаться только в одном направлении, указанном стрелкой. Сколько существует различных путей из города А в город G?';
+  let instruction = 'На рисунке — схема дорог, связывающих города. По каждой дороге можно двигаться только в одном направлении, указанном стрелкой. ';
+  
+  if (task.type === 'simple') {
+    instruction += 'Сколько существует различных путей из города А в город К?';
+  } else if (task.type === 'through') {
+    instruction += `Сколько существует различных путей из города А в город К, проходящих через город ${task.targetNode}?`;
+  } else if (task.type === 'not_through') {
+    instruction += `Сколько существует различных путей из города А в город К, не проходящих через город ${task.targetNode}?`;
+  }
+
+  el.instruction.textContent = instruction;
 
   el.graphContainer.innerHTML = '';
-  el.graphContainer.appendChild(renderGraphToSVG(state.currentGraph.edges));
+  el.graphContainer.appendChild(renderGraphToSVG(task.edges));
 
   el.answerInput.value = '';
   el.answerInput.disabled = false;
@@ -248,7 +353,7 @@ function checkAnswer() {
   }
 
   const userAnswer = parseInt(val, 10);
-  const isCorrect = userAnswer === state.currentGraph.paths;
+  const isCorrect = userAnswer === state.currentGraph.answer;
 
   state.answered = true;
   el.answerInput.disabled = true;
@@ -262,7 +367,7 @@ function checkAnswer() {
     el.feedback.className = 'feedback success';
   } else {
     el.answerInput.classList.add('wrong');
-    el.feedback.textContent = `❌ Неправильно. Правильный ответ: ${state.currentGraph.paths}.`;
+    el.feedback.textContent = `❌ Неправильно. Правильный ответ: ${state.currentGraph.answer}.`;
     el.feedback.className = 'feedback error';
   }
 
@@ -318,4 +423,5 @@ el.answerInput.addEventListener('keydown', (e) => {
 
 /* ---------------------- СТАРТ ---------------------- */
 
+state.tasks = generateTasks();
 renderTask();
