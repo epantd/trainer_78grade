@@ -6,26 +6,33 @@
 
 const TOTAL_TASKS = 20;
 
-// Координаты вершин (расположены слоями)
+// Координаты вершин (как в версии на 14 заданий)
 const NODES = {
-  'A':  { x: 60,  y: 200 },
-  'Б':  { x: 160, y: 80 },
-  'В':  { x: 160, y: 200 },
-  'Г':  { x: 160, y: 320 },
-  'Д':  { x: 280, y: 80 },
-  'Е':  { x: 280, y: 200 },
-  'Ж':  { x: 280, y: 320 },
-  'З':  { x: 400, y: 120 },
-  'И':  { x: 400, y: 280 },
-  'К':  { x: 500, y: 200 }
+  A: { x: 80,  y: 200 },
+  B: { x: 180, y: 100 },
+  C: { x: 200, y: 300 },
+  E: { x: 300, y: 200 },
+  D: { x: 320, y: 120 },
+  F: { x: 340, y: 280 },
+  G: { x: 440, y: 200 }
 };
+
+// Возможные рёбра (как в версии на 14 заданий)
+const POSSIBLE_EDGES = [
+  ['A', 'B'], ['A', 'C'], ['A', 'E'],
+  ['B', 'D'], ['B', 'E'],
+  ['C', 'E'], ['C', 'F'],
+  ['D', 'G'],
+  ['E', 'D'], ['E', 'F'], ['E', 'G'],
+  ['F', 'G']
+];
 
 // Первые 4 задания с фиксированным количеством путей
 const FIXED_GRAPHS = [
-  { edges: [['A','В'], ['A','Е'], ['В','Е'], ['Е','К']], paths: 2 },
-  { edges: [['A','В'], ['A','Е'], ['В','Е'], ['В','К'], ['Е','К']], paths: 3 },
-  { edges: [['A','Б'], ['A','В'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Е','Д'], ['Е','Ж'], ['Е','К'], ['Д','К'], ['Ж','К']], paths: 7 },
-  { edges: [['A','Б'], ['A','В'], ['A','Е'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Е','Д'], ['Е','Ж'], ['Е','К'], ['Д','К'], ['Ж','К']], paths: 10 }
+  { edges: [['A','B'], ['A','E'], ['B','E'], ['E','G']], paths: 2 },
+  { edges: [['A','B'], ['A','E'], ['B','E'], ['B','G'], ['E','G']], paths: 3 },
+  { edges: [['A','B'], ['A','C'], ['B','E'], ['C','E'], ['C','F'], ['E','D'], ['E','F'], ['E','G'], ['D','G'], ['F','G']], paths: 7 },
+  { edges: [['A','B'], ['A','C'], ['A','E'], ['B','E'], ['C','E'], ['C','F'], ['E','D'], ['E','F'], ['E','G'], ['D','G'], ['F','G']], paths: 10 }
 ];
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
@@ -99,35 +106,36 @@ function getIntermediateNodes(edges, start, end) {
 /* ---------------------- ГЕНЕРАЦИЯ ГРАФОВ ---------------------- */
 
 function generateRandomEdges() {
-  const possibleEdges = [];
-  const keys = Object.keys(NODES);
-  
-  // Создаём потенциальные рёбра между слоями (слева направо)
-  for (let i = 0; i < keys.length; i++) {
-    for (let j = i + 1; j < keys.length; j++) {
-      const u = keys[i];
-      const v = keys[j];
-      if (NODES[v].x > NODES[u].x && NODES[v].x - NODES[u].x <= 150) {
-        possibleEdges.push([u, v]);
-      }
-    }
-  }
-
   let bestEdges = null;
   let bestDiff = Infinity;
   const target = 12; // Стремимся к ~12 путям (середина диапазона 4-25)
 
-  for (let attempt = 0; attempt < 200; attempt++) {
+  for (let attempt = 0; attempt < 300; attempt++) {
     const edges = [];
     
-    possibleEdges.forEach(([u, v]) => {
-      // Вероятность появления ребра
+    POSSIBLE_EDGES.forEach(([u, v]) => {
       if (Math.random() < 0.55) {
         edges.push([u, v]);
       }
     });
 
-    const paths = countPaths(edges, 'A', 'К');
+    // Проверяем, что нет "висячих" точек (кроме A и G)
+    let valid = true;
+    for (const node of Object.keys(NODES)) {
+      if (node === 'A' || node === 'G') continue;
+      
+      const hasIn = edges.some(([u, v]) => v === node);
+      const hasOut = edges.some(([u, v]) => u === node);
+      
+      if (!hasIn || !hasOut) {
+        valid = false;
+        break;
+      }
+    }
+    
+    if (!valid) continue;
+
+    const paths = countPaths(edges, 'A', 'G');
     
     // Если попали в желаемый диапазон (от 4 до 25) — отлично
     if (paths >= 4 && paths <= 25) {
@@ -147,7 +155,7 @@ function generateRandomEdges() {
   if (bestEdges) return bestEdges;
 
   // Резервный вариант
-  return [['A','Б'], ['A','В'], ['A','Г'], ['Б','Д'], ['Б','Е'], ['В','Е'], ['В','Ж'], ['Г','Ж'], ['Д','З'], ['Е','З'], ['Е','И'], ['Ж','И'], ['З','К'], ['И','К']];
+  return [['A','B'], ['A','C'], ['A','E'], ['B','D'], ['B','E'], ['C','E'], ['C','F'], ['D','G'], ['E','D'], ['E','F'], ['E','G'], ['F','G']];
 }
 
 /* ---------------------- ГЕНЕРАЦИЯ ЗАДАНИЙ ---------------------- */
@@ -170,7 +178,7 @@ function generateTasks() {
     tasks.push({
       type: 'simple',
       edges: edges,
-      answer: countPaths(edges, 'A', 'К')
+      answer: countPaths(edges, 'A', 'G')
     });
   }
 
@@ -179,12 +187,12 @@ function generateTasks() {
     let edges, intermediates, targetNode, paths;
     do {
       edges = generateRandomEdges();
-      intermediates = getIntermediateNodes(edges, 'A', 'К');
+      intermediates = getIntermediateNodes(edges, 'A', 'G');
     } while (intermediates.length === 0);
 
     targetNode = intermediates[Math.floor(Math.random() * intermediates.length)];
     const p1 = countPaths(edges, 'A', targetNode);
-    const p2 = countPaths(edges, targetNode, 'К');
+    const p2 = countPaths(edges, targetNode, 'G');
     paths = p1 * p2;
 
     tasks.push({
@@ -200,13 +208,13 @@ function generateTasks() {
     let edges, intermediates, targetNode, paths;
     do {
       edges = generateRandomEdges();
-      intermediates = getIntermediateNodes(edges, 'A', 'К');
+      intermediates = getIntermediateNodes(edges, 'A', 'G');
     } while (intermediates.length === 0);
 
     targetNode = intermediates[Math.floor(Math.random() * intermediates.length)];
-    const totalPaths = countPaths(edges, 'A', 'К');
+    const totalPaths = countPaths(edges, 'A', 'G');
     const p1 = countPaths(edges, 'A', targetNode);
-    const p2 = countPaths(edges, targetNode, 'К');
+    const p2 = countPaths(edges, targetNode, 'G');
     const throughPaths = p1 * p2;
     paths = totalPaths - throughPaths;
 
@@ -225,7 +233,7 @@ function generateTasks() {
 
 function renderGraphToSVG(edges) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 560 400');
+  svg.setAttribute('viewBox', '0 0 520 400');
   svg.setAttribute('class', 'graph-svg');
 
   // Маркер для стрелок
@@ -249,6 +257,7 @@ function renderGraphToSVG(edges) {
     const ux = dx / len;
     const uy = dy / len;
 
+    // Отступаем от центров вершин
     const x1 = p1.x + ux * 6;
     const y1 = p1.y + uy * 6;
     const x2 = p2.x - ux * 14;
@@ -317,11 +326,11 @@ function renderTask() {
   let instruction = 'На рисунке — схема дорог, связывающих города. По каждой дороге можно двигаться только в одном направлении, указанном стрелкой. ';
   
   if (task.type === 'simple') {
-    instruction += 'Сколько существует различных путей из города А в город К?';
+    instruction += 'Сколько существует различных путей из города A в город G?';
   } else if (task.type === 'through') {
-    instruction += `Сколько существует различных путей из города А в город К, проходящих через город ${task.targetNode}?`;
+    instruction += `Сколько существует различных путей из города A в город G, проходящих через город ${task.targetNode}?`;
   } else if (task.type === 'not_through') {
-    instruction += `Сколько существует различных путей из города А в город К, не проходящих через город ${task.targetNode}?`;
+    instruction += `Сколько существует различных путей из города A в город G, не проходящих через город ${task.targetNode}?`;
   }
 
   el.instruction.textContent = instruction;
