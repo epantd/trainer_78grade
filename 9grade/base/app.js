@@ -1,7 +1,7 @@
 /* =========================================================
    ТРЕНАЖЁР: Однотабличная база данных
-   UX имитирует LibreOffice Calc: фильтры после выделения
-   заголовков, диаграмма через «Вставка → Диаграмма...»
+   UX имитирует LibreOffice Calc: сортировка через панель,
+   фильтры после выделения, статистика внизу, диаграмма через меню.
    ========================================================= */
 
 const ALL_NAMES = ['Иван','Анна','Максим','Ольга','Дмитрий','Елена','Артём','София','Никита','Мария','Алексей','Виктория','Сергей','Полина','Андрей','Ксения','Михаил','Алиса','Роман','Екатерина'];
@@ -15,6 +15,26 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+/* ---------- Числовые утилиты ---------- */
+function formatAvg(avg) {
+  return String(Math.round(avg * 100) / 100);
+}
+function numsEqual(a, b) {
+  const na = parseFloat(String(a).replace(',', '.'));
+  const nb = parseFloat(String(b).replace(',', '.'));
+  if (isNaN(na) || isNaN(nb)) return false;
+  return Math.abs(na - nb) < 0.01;
+}
+function displayAvg(avg) {
+  return avg.toFixed(2);
 }
 
 /* ---------- Генерация данных ---------- */
@@ -51,6 +71,88 @@ function generateData() {
   return students;
 }
 
+/* ---------- Генератор вопросов с двумя фильтрами ---------- */
+function generateTwoFilterQuestions(students, n) {
+  const groups = {
+    hand: [
+      { fn: s => s.hand === 'Правша', label: 'правши' },
+      { fn: s => s.hand === 'Левша', label: 'левши' }
+    ],
+    gender: [
+      { fn: s => s.gender === 'М', label: 'мальчики' },
+      { fn: s => s.gender === 'Ж', label: 'девочки' }
+    ],
+    eyes: ALL_EYES.map(e => ({
+      fn: s => s.eyes === e,
+      label: 'с ' + e.toLowerCase() + 'ми глазами'
+    })),
+    subject: [
+      { fn: s => s.math === 5, label: 'получившие 5 по математике' },
+      { fn: s => s.rus === 5,  label: 'получившие 5 по русскому' },
+      { fn: s => s.eng === 5,  label: 'получившие 5 по английскому' }
+    ]
+  };
+
+  const qs = [];
+  const used = new Set();
+  const groupKeys = Object.keys(groups);
+  let attempts = 0;
+
+  while (qs.length < n && attempts < 500) {
+    attempts++;
+    const gk = shuffle(groupKeys).slice(0, 2);
+    const v1 = groups[gk[0]][Math.floor(Math.random() * groups[gk[0]].length)];
+    const v2 = groups[gk[1]][Math.floor(Math.random() * groups[gk[1]].length)];
+
+    const key = v1.label + '|' + v2.label;
+    if (used.has(key)) continue;
+
+    const matches = students.filter(s => v1.fn(s) && v2.fn(s)).length;
+    if (matches < 1 || matches >= students.length) continue;
+
+    used.add(key);
+    qs.push({
+      text: `Сколько в классе ${v1.label} ${v2.label}?`,
+      correct: String(matches)
+    });
+  }
+
+  while (qs.length < n) {
+    qs.push({
+      text: 'Сколько в классе правшей с голубыми глазами?',
+      correct: String(students.filter(s => s.hand === 'Правша' && s.eyes === 'Голубые').length)
+    });
+  }
+  return qs;
+}
+
+/* ---------- Генератор вопроса про средний балл ---------- */
+function generateAvgQuestion(students) {
+  const subjects = [
+    { col: 'math', label: 'математике' },
+    { col: 'rus',  label: 'русскому языку' },
+    { col: 'eng',  label: 'английскому языку' }
+  ];
+  const filters = [
+    { fn: s => s.hand === 'Правша', label: 'правшей' },
+    { fn: s => s.hand === 'Левша',  label: 'левшей' },
+    { fn: s => s.gender === 'М',    label: 'мальчиков' },
+    { fn: s => s.gender === 'Ж',    label: 'девочек' }
+  ];
+
+  const subj = subjects[Math.floor(Math.random() * subjects.length)];
+  const flt = filters[Math.floor(Math.random() * filters.length)];
+
+  const matching = students.filter(flt.fn);
+  const vals = matching.map(s => s[subj.col]);
+  const avg = vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+
+  return {
+    text: `Каков средний балл по ${subj.label} у ${flt.label}? (Отфильтруйте их, выделите столбец нужной оценки и посмотрите «Среднее» в нижней панели.)`,
+    correct: formatAvg(avg)
+  };
+}
+
 /* ---------- Генерация вопросов ---------- */
 function generateQuestions(students) {
   const qs = [];
@@ -61,27 +163,27 @@ function generateQuestions(students) {
   qs.push({ type:'choice', instruction:'Вы выделили несколько ячеек с числами. Где посмотреть их количество или сумму?', options:['В строке формул','В статус-баре в самом низу экрана','В ячейке А1','В меню «Файл»'], correct:'В статус-баре в самом низу экрана', explain:'В нижней серой полосе (статус-баре) отображается количество, сумма и среднее значение выделенных ячеек.' });
   qs.push({ type:'choice', instruction:'Где в LibreOffice Calc находится команда вставки диаграммы?', options:['Меню «Файл»','Меню «Вставка» → «Диаграмма...»','Меню «Правка»','Меню «Сервис»'], correct:'Меню «Вставка» → «Диаграмма...»', explain:'В Calc диаграмма вставляется через меню «Вставка» → «Диаграмма...».' });
 
-  /* Блок 2: фильтр/сортировка */
+  /* Блок 2: фильтр/сортировка (одиночные) */
   const maxH = Math.max(...students.map(s => s.height));
   const tallest = students.find(s => s.height === maxH).name;
-  qs.push({ type:'input', instruction:'Отсортируйте таблицу по столбцу «Рост» по убыванию. Кто на самом верху (самый высокий)? Введите имя.', table:true, correct: tallest, explain: `Самый высокий — ${tallest}, рост ${maxH} см.` });
+  qs.push({ type:'input', instruction:'Выделите столбец «Рост», затем нажмите кнопку «↕ Сортировка» в верхней панели (два раза для сортировки по убыванию). Кто на самом верху?', table:true, correct: tallest, explain:`Самый высокий — ${tallest}, рост ${maxH} см.` });
 
   const eyeCounts = {};
   students.forEach(s => eyeCounts[s.eyes] = (eyeCounts[s.eyes] || 0) + 1);
   const eyeOptions = Object.keys(eyeCounts).filter(e => eyeCounts[e] >= 2 && eyeCounts[e] < students.length);
   const randomEye = eyeOptions.length ? eyeOptions[Math.floor(Math.random() * eyeOptions.length)] : Object.keys(eyeCounts)[0];
-  qs.push({ type:'input', instruction: `Выделите заголовки столбцов, примените фильтр к «Глаза» и оставьте только «${randomEye}». Сколько учеников осталось?`, table:true, correct: String(eyeCounts[randomEye]), explain: `Учеников с глазами «${randomEye}»: ${eyeCounts[randomEye]}.` });
+  qs.push({ type:'input', instruction: `Выделите заголовок «Глаза», нажмите «🫙 Фильтр» и оставьте только «${randomEye}». Сколько учеников осталось?`, table:true, correct: String(eyeCounts[randomEye]), explain: `Учеников с глазами «${randomEye}»: ${eyeCounts[randomEye]}.` });
 
   const minH = Math.min(...students.map(s => s.height));
   const shortest = students.find(s => s.height === minH).name;
-  qs.push({ type:'input', instruction:'Отсортируйте таблицу по «Рост» по возрастанию. Кто самый низкий?', table:true, correct: shortest, explain: `Самый низкий — ${shortest}, рост ${minH} см.` });
+  qs.push({ type:'input', instruction:'Выделите столбец «Рост», примените сортировку по возрастанию. Кто самый низкий?', table:true, correct: shortest, explain:`Самый низкий — ${shortest}, рост ${minH} см.` });
 
-  qs.push({ type:'input', instruction:'Найдите всех левшей через фильтр. Сколько их?', table:true, correct: String(students.filter(s => s.hand === 'Левша').length), explain: `Левшей: ${students.filter(s => s.hand === 'Левша').length}.` });
+  qs.push({ type:'input', instruction:'Найдите всех левшей через фильтр. Сколько их?', table:true, correct: String(students.filter(s => s.hand === 'Левша').length), explain:`Левшей: ${students.filter(s => s.hand === 'Левша').length}.` });
 
-  qs.push({ type:'input', instruction:'Отфильтруйте по полу «Ж». Сколько девочек?', table:true, correct: String(students.filter(s => s.gender === 'Ж').length), explain: `Девочек: ${students.filter(s => s.gender === 'Ж').length}.` });
+  qs.push({ type:'input', instruction:'Отфильтруйте по полу «Ж». Сколько девочек?', table:true, correct: String(students.filter(s => s.gender === 'Ж').length), explain:`Девочек: ${students.filter(s => s.gender === 'Ж').length}.` });
 
   const firstAlpha = students.map(s => s.name).sort((a,b) => a.localeCompare(b))[0];
-  qs.push({ type:'input', instruction:'Отсортируйте по «Имя» (от А до Я). Какое имя первое?', table:true, correct: firstAlpha, explain: `Первое по алфавиту — ${firstAlpha}.` });
+  qs.push({ type:'input', instruction:'Выделите «Имя», нажмите «↕ Сортировка». Какое имя первое?', table:true, correct: firstAlpha, explain:`Первое по алфавиту — ${firstAlpha}.` });
 
   /* Блок 3: два фильтра */
   let combo = null;
@@ -115,7 +217,7 @@ function generateQuestions(students) {
   const leftAbove = students.filter(s => s.hand === 'Левша' && s.height > threshold).length;
   qs.push({ type:'input', instruction: `Два фильтра: «Рука = Левша» и «Рост > ${threshold}». Сколько учеников?`, table:true, correct: String(leftAbove), explain: `Левшей с ростом > ${threshold}: ${leftAbove}.` });
 
-  /* Блок 4: оценки */
+  /* Блок 4: оценки и диаграмма */
   const cRus = students.filter(s => s.rus >= 4).length;
   const cMath = students.filter(s => s.math >= 4).length;
   const cEng = students.filter(s => s.eng >= 4).length;
@@ -124,7 +226,7 @@ function generateQuestions(students) {
 
   qs.push({ type:'chart_interactive', instruction:'Выделите таблицу с данными (клик по ней). Затем откройте меню «Вставка» → «Диаграмма...», выберите «Круговая» и нажмите «Готово».', chartData:{ rus: cRus, math: cMath, eng: cEng }, explain:'Круговая диаграмма показывает доли учеников по предметам.' });
 
-  /* Блок 5: комбинированные */
+  /* Блок 5: мини-задания с диаграммой (старый формат) */
   const boys = students.filter(s => s.gender === 'М').length;
   const girls = students.filter(s => s.gender === 'Ж').length;
   qs.push({ type:'chart_combined', instruction:'Подсчитайте мальчиков и девочек. Впишите числа в таблицу, выделите её и постройте диаграмму через «Вставка → Диаграмма...» (тип «Круговая»).', table:true, tableData:[{key:'boys',label:'Мальчики'},{key:'girls',label:'Девочки'}], correct:{ boys: String(boys), girls: String(girls) }, chartLabels:{ boys:'Мальчики', girls:'Девочки' }, chartColors:{ boys:'#4f6ef7', girls:'#f59e0b' }, explain:'Круговая диаграмма показывает соотношение мальчиков и девочек.' });
@@ -144,12 +246,34 @@ function generateQuestions(students) {
   });
   qs.push({ type:'chart_combined', instruction:'Подсчитайте количество учеников с каждым цветом глаз. Впишите числа, выделите таблицу и постройте круговую диаграмму.', table:true, tableData: eyeTableData, correct: eyeCorrect, chartLabels: eyeLabels, chartColors: eyeColorsMap, explain:'Круговая диаграмма показывает распределение по цвету глаз.' });
 
-  /* Блок 6: вывод */
-  let best = '', maxCount = Math.max(cRus, cMath, cEng);
-  if (maxCount === cRus) best = 'русский язык';
-  else if (maxCount === cMath) best = 'математику';
-  else best = 'английский язык';
-  qs.push({ type:'choice', instruction:'Вернитесь к первой диаграмме (по предметам). Какой вывод можно сделать?', options:['Лучше всего сдали русский язык','Лучше всего сдали математику','Лучше всего сдали английский язык','Все предметы сдали одинаково'], correct: 'Лучше всего сдали ' + best, explain: `На 4 и 5 ${best} сдали ${maxCount} человек — больше, чем по другим.` });
+  /* Блок 6: ПОЛНОЦЕННЫЕ задания (фильтр × 3 + диаграмма) — 6 штук */
+  for (let i = 0; i < 6; i++) {
+    let filterQuestions, attempts = 0;
+    do {
+      filterQuestions = generateTwoFilterQuestions(students, 3);
+      const vals = filterQuestions.map(q => Number(q.correct));
+      const uniq = new Set(vals);
+      const sum = vals.reduce((a,b)=>a+b, 0);
+      if (uniq.size >= 2 && sum >= 4 && sum <= 25) break;
+      attempts++;
+    } while (attempts < 30);
+    qs.push({ type: 'full_chart', filterQuestions });
+  }
+
+  /* Блок 7: ПОЛНОЦЕННЫЕ + СРЕДНИЙ БАЛЛ — 3 штуки */
+  for (let i = 0; i < 3; i++) {
+    let filterQuestions, attempts = 0;
+    do {
+      filterQuestions = generateTwoFilterQuestions(students, 3);
+      const vals = filterQuestions.map(q => Number(q.correct));
+      const uniq = new Set(vals);
+      const sum = vals.reduce((a,b)=>a+b, 0);
+      if (uniq.size >= 2 && sum >= 4 && sum <= 25) break;
+      attempts++;
+    } while (attempts < 30);
+    const avgQuestion = generateAvgQuestion(students);
+    qs.push({ type: 'full_chart_avg', filterQuestions, avgQuestion });
+  }
 
   return qs;
 }
@@ -208,13 +332,30 @@ function getFilteredData() {
   return data;
 }
 
+function getLastSelectedColumn() {
+  const arr = [...state.selectedHeaders];
+  return arr.length > 0 ? arr[arr.length - 1] : null;
+}
+
+function getColumnStats(colKey) {
+  const data = getFilteredData();
+  const vals = data.map(s => s[colKey]).map(Number).filter(v => !isNaN(v));
+  if (!vals.length) return { count: data.length, sum: 0, avg: 0, hasNumeric: false };
+  const sum = vals.reduce((a,b)=>a+b, 0);
+  return { count: data.length, sum, avg: sum / vals.length, hasNumeric: true };
+}
+
 function renderTable(container) {
   const data = getFilteredData();
+  const statsCol = getLastSelectedColumn();
 
   let html = '<div class="data-toolbar">';
   html += '<span class="data-toolbar-label">Таблица данных</span>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html += '<button class="toolbar-btn" id="sortMainBtn" title="Сортировать выделенный столбец">↕ Сортировка</button>';
   html += '<button class="toolbar-btn" id="filterMainBtn">🫙 Фильтр</button>';
-  html += '</div>';
+  html += '<button class="toolbar-btn" id="resetMainBtn">✖ Сбросить</button>';
+  html += '</div></div>';
 
   html += '<div class="table-wrap"><table class="data-table"><thead><tr>';
   COLUMNS.forEach(col => {
@@ -223,9 +364,9 @@ function renderTable(container) {
     html += `<th class="header-cell${isSel ? ' selected-header' : ''}" data-col="${col.key}">`;
     html += '<div class="th-inner">';
     html += `<span>${col.label}</span>`;
-    let icon = '↕';
-    if (state.sort.col === col.key) icon = state.sort.dir === 'asc' ? '↑' : '↓';
-    html += `<button class="sort-btn" data-col="${col.key}" title="Сортировать">${icon}</button>`;
+    if (state.sort.col === col.key) {
+      html += `<span class="sort-indicator">${state.sort.dir === 'asc' ? '↑' : '↓'}</span>`;
+    }
     if (fEnabled) {
       const uniq = [...new Set(STUDENTS.map(s => s[col.key]))].sort();
       const val = state.filters[col.key] || 'all';
@@ -247,11 +388,24 @@ function renderTable(container) {
     });
   }
   html += '</tbody></table></div>';
-  html += `<p class="table-info">Показано строк: <b>${data.length}</b></p>`;
+
+  // Нижняя панель статистики
+  html += '<div class="db-status-bar">';
+  html += `<span>Строк: <b>${data.length}</b></span>`;
+  if (statsCol) {
+    const stats = getColumnStats(statsCol);
+    const colLabel = COLUMNS.find(c => c.key === statsCol)?.label || statsCol;
+    html += `<span>Столбец: <b>${colLabel}</b></span>`;
+    if (stats.hasNumeric) {
+      html += `<span>Сумма: <b>${stats.sum}</b></span>`;
+      html += `<span>Среднее: <b>${displayAvg(stats.avg)}</b></span>`;
+    }
+  }
+  html += '</div>';
 
   container.innerHTML = html;
 
-  // Клик по заголовку — выделение (не считаем клики по sort-btn/filter-select)
+  // Клик по заголовку — выделение
   container.querySelectorAll('.header-cell').forEach(th => {
     th.addEventListener('click', (e) => {
       if (e.target.closest('.sort-btn') || e.target.closest('.filter-select')) return;
@@ -260,6 +414,21 @@ function renderTable(container) {
       else state.selectedHeaders.add(col);
       renderTable(container);
     });
+  });
+
+  // Кнопка «Сортировка»
+  container.querySelector('#sortMainBtn').addEventListener('click', () => {
+    if (!statsCol) {
+      setFeedback('warn', 'Сначала выделите столбец (кликните по его заголовку), затем нажмите «Сортировка».');
+      return;
+    }
+    if (state.sort.col === statsCol) {
+      state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sort.col = statsCol;
+      state.sort.dir = 'asc';
+    }
+    renderTable(container);
   });
 
   // Кнопка «Фильтр»
@@ -279,18 +448,16 @@ function renderTable(container) {
     }
   });
 
-  // Сортировка
-  container.querySelectorAll('.sort-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const col = btn.dataset.col;
-      if (state.sort.col === col) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
-      else { state.sort.col = col; state.sort.dir = 'asc'; }
-      renderTable(container);
-    });
+  // Кнопка «Сбросить»
+  container.querySelector('#resetMainBtn').addEventListener('click', () => {
+    state.filters = {};
+    state.filterHeaders.clear();
+    state.selectedHeaders.clear();
+    state.sort = { col: null, dir: 'asc' };
+    renderTable(container);
   });
 
-  // Фильтры
+  // Изменение фильтров
   container.querySelectorAll('.filter-select').forEach(sel => {
     sel.addEventListener('click', e => e.stopPropagation());
     sel.addEventListener('change', () => {
@@ -325,7 +492,7 @@ function renderQuestion() {
   state.selectedHeaders = new Set();
   state.filterHeaders = new Set();
 
-  el.instruction.textContent = q.instruction;
+  el.instruction.textContent = q.instruction || '';
   el.taskBody.innerHTML = '';
   setFeedback('', '');
   el.checkBtn.hidden = false;
@@ -350,13 +517,16 @@ function renderQuestion() {
   else if (q.type === 'table_input') renderTableInput(q, ac);
   else if (q.type === 'chart_interactive') renderChartTask(q, ac, false);
   else if (q.type === 'chart_combined') renderChartTask(q, ac, true);
+  else if (q.type === 'full_chart') renderFullChart(q, ac, false);
+  else if (q.type === 'full_chart_avg') renderFullChart(q, ac, true);
 }
 
 /* ---------- Тип: выбор ---------- */
 function renderChoice(q, c) {
   const wrap = document.createElement('div');
   wrap.className = 'options';
-  q.options.forEach(opt => {
+  const opts = shuffle(q.options.slice());
+  opts.forEach(opt => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'option';
@@ -413,7 +583,7 @@ function renderTableInput(q, c) {
   c.appendChild(table);
 }
 
-/* ---------- Тип: интерактивная диаграмма (вставка через меню) ---------- */
+/* ---------- Тип: интерактивная диаграмма (готовые данные) ---------- */
 function renderChartTask(q, c, needInput) {
   el.checkBtn.hidden = true;
   el.nextBtn.hidden = true;
@@ -423,7 +593,6 @@ function renderChartTask(q, c, needInput) {
   state.selection = {};
 
   if (needInput) {
-    // Пустая таблица для ввода
     let thead = '<thead><tr><th>Категория</th><th>Количество</th></tr></thead>';
     let tbody = '<tbody>';
     q.tableData.forEach(row => {
@@ -435,7 +604,6 @@ function renderChartTask(q, c, needInput) {
       state.selection[inp.dataset.key] = inp;
     });
   } else {
-    // Готовая таблица с данными
     table.innerHTML = `<thead><tr><th>Предмет</th><th>Сдали на 4 и 5</th></tr></thead><tbody>
       <tr><td>Русский язык</td><td>${q.chartData.rus}</td></tr>
       <tr><td>Математика</td><td>${q.chartData.math}</td></tr>
@@ -486,7 +654,6 @@ function renderChartTask(q, c, needInput) {
     inp.addEventListener('focus', markSelected);
   });
 
-  // Меню «Вставка»
   const menuBtn = toolbar.querySelector('#insertMenuBtn');
   const menu = toolbar.querySelector('#insertMenu');
   menuBtn.addEventListener('click', (e) => {
@@ -510,7 +677,6 @@ function renderChartTask(q, c, needInput) {
           return;
         }
 
-        // Проверка значений для chart_combined
         if (needInput) {
           let hasEmpty = false;
           for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
@@ -556,6 +722,183 @@ function renderChartTask(q, c, needInput) {
         el.nextBtn.hidden = false;
         updateProgress(true);
         setFeedback('success', '✅ Диаграмма построена! ' + (q.explain || ''));
+      }
+    });
+  });
+}
+
+/* ---------- Тип: полное задание (фильтр × 3 + диаграмма) ---------- */
+function renderFullChart(q, c, hasAvg) {
+  el.checkBtn.hidden = true;
+  el.nextBtn.hidden = true;
+
+  // Инструкция
+  const intro = document.createElement('div');
+  intro.className = 'formula-box';
+  intro.innerHTML = '📌 <b>Порядок работы:</b><br>' +
+    '① С помощью фильтров (кнопка 🫙 Фильтр) определите три значения.<br>' +
+    '② Впишите их в мини-таблицу.<br>' +
+    '③ Выделите мини-таблицу (кликните по ней).<br>' +
+    '④ «Вставка → Диаграмма...» → «Круговая» → «Готово».';
+  c.appendChild(intro);
+
+  // Мини-таблица с 3 вопросами
+  const table = document.createElement('table');
+  table.className = 'mini-table';
+  let tbody = '';
+  q.filterQuestions.forEach((fq, i) => {
+    tbody += `<tr>
+      <td style="text-align:left;padding:8px;font-size:13.5px">${i+1}. ${escapeHtml(fq.text)}</td>
+      <td style="width:80px"><input type="text" class="table-input" data-key="q${i}" placeholder="?"></td>
+    </tr>`;
+  });
+  table.innerHTML = '<thead><tr><th>Вопрос</th><th>Ответ</th></tr></thead><tbody>' + tbody + '</tbody>';
+  c.appendChild(table);
+
+  state.selection = {};
+  table.querySelectorAll('.table-input').forEach(inp => {
+    state.selection[inp.dataset.key] = inp;
+  });
+
+  // Блок с вопросом про средний балл
+  let avgInput = null;
+  if (hasAvg) {
+    const avgBox = document.createElement('div');
+    avgBox.style.cssText = 'margin:18px auto;padding:14px 18px;background:#fef3c7;border-left:4px solid #b45309;border-radius:10px;max-width:600px;';
+    avgBox.innerHTML = `
+      <p style="margin:0 0 10px;font-size:14px;line-height:1.5;"><b>🧮 Дополнительный вопрос:</b> ${escapeHtml(q.avgQuestion.text)}</p>
+      <input type="text" class="table-input" id="avgInput" placeholder="Средний балл" style="width:120px;margin:0 auto;display:block;">
+    `;
+    c.appendChild(avgBox);
+    avgInput = avgBox.querySelector('#avgInput');
+  }
+
+  // Тулбар и контейнер для диаграммы
+  const toolbar = document.createElement('div');
+  toolbar.className = 'mini-toolbar';
+  toolbar.innerHTML = `
+    <div class="menu-wrapper">
+      <button class="toolbar-btn" id="insertMenuBtn">Вставка ▾</button>
+      <div class="dropdown-menu" id="insertMenu" hidden>
+        <button class="dropdown-item" id="insertChartItem">📊 Диаграмма...</button>
+      </div>
+    </div>
+    <span class="table-select-status" id="selStatus">○ Мини-таблица не выделена</span>
+  `;
+
+  const chartContainer = document.createElement('div');
+  chartContainer.className = 'chart-container';
+  chartContainer.style.display = 'none';
+  chartContainer.style.flexDirection = 'column';
+  chartContainer.style.alignItems = 'center';
+  chartContainer.style.gap = '16px';
+  chartContainer.style.marginTop = '20px';
+
+  c.appendChild(toolbar);
+  c.appendChild(chartContainer);
+
+  const statusEl = toolbar.querySelector('#selStatus');
+  let tableSelected = false;
+
+  const markSelected = () => {
+    if (tableSelected) return;
+    tableSelected = true;
+    table.classList.add('selected');
+    statusEl.textContent = '✓ Мини-таблица выделена';
+    statusEl.classList.add('selected');
+  };
+
+  table.addEventListener('click', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    markSelected();
+  });
+  table.querySelectorAll('.table-input').forEach(inp => {
+    inp.addEventListener('focus', markSelected);
+  });
+
+  const menuBtn = toolbar.querySelector('#insertMenuBtn');
+  const menu = toolbar.querySelector('#insertMenu');
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+  });
+
+  toolbar.querySelector('#insertChartItem').addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.hidden = true;
+
+    if (!tableSelected) {
+      setFeedback('warn', 'Сначала выделите мини-таблицу (кликните по ней).');
+      return;
+    }
+
+    openChartWizard({
+      onInsert: (chartType, api) => {
+        if (chartType !== 'pie') {
+          api.showMessage('Для сравнения частей целого нужна круговая диаграмма.');
+          return;
+        }
+
+        // Проверяем 3 значения
+        let allOk = true;
+        for (const k in state.selection) {
+          const inp = state.selection[k];
+          const idx = +k.slice(1);
+          if (!inp.value.trim()) { allOk = false; inp.classList.add('wrong'); }
+          else if (inp.value.trim() !== q.filterQuestions[idx].correct) {
+            allOk = false; inp.classList.add('wrong');
+          } else {
+            inp.classList.remove('wrong'); inp.classList.add('ok');
+          }
+        }
+
+        if (!allOk) {
+          api.close();
+          setTimeout(() => {
+            for (const k in state.selection) state.selection[k].classList.remove('ok', 'wrong');
+          }, 1500);
+          setFeedback('error', '❌ Не все значения верны. Исправьте и попробуйте снова.');
+          return;
+        }
+
+        // Проверяем средний балл (если есть)
+        if (hasAvg && avgInput) {
+          if (!avgInput.value.trim()) {
+            api.close();
+            setFeedback('warn', 'Введите ответ на дополнительный вопрос про средний балл.');
+            return;
+          }
+          if (!numsEqual(avgInput.value, q.avgQuestion.correct)) {
+            api.close();
+            avgInput.classList.add('wrong');
+            setTimeout(() => avgInput.classList.remove('wrong'), 1500);
+            setFeedback('error', '❌ Неверный средний балл. Проверьте расчёт.');
+            return;
+          }
+          avgInput.classList.remove('wrong');
+          avgInput.classList.add('ok');
+        }
+
+        // Строим диаграмму
+        api.close();
+        chartContainer.style.display = 'flex';
+        const chartData = {};
+        const labels = {};
+        q.filterQuestions.forEach((fq, i) => {
+          chartData['q' + i] = Number(fq.correct);
+          labels['q' + i] = 'Вопрос ' + (i + 1);
+        });
+        const colors = { q0: '#4f6ef7', q1: '#16a34a', q2: '#f59e0b' };
+        chartContainer.innerHTML = buildPie(chartData, labels, colors);
+
+        for (const k in state.selection) state.selection[k].disabled = true;
+        if (avgInput) avgInput.disabled = true;
+
+        state.answered = true;
+        state.correct++;
+        el.nextBtn.hidden = false;
+        updateProgress(true);
+        setFeedback('success', '✅ Отлично! Диаграмма построена.');
       }
     });
   });
@@ -662,6 +1005,9 @@ function markTable(q) {
 function checkAnswer() {
   if (state.answered) return;
   const q = currentQuestion();
+  if (q.type === 'full_chart' || q.type === 'full_chart_avg' ||
+      q.type === 'chart_interactive' || q.type === 'chart_combined') return;
+
   let ok = false, corrText = '';
 
   if (q.type === 'choice') {
