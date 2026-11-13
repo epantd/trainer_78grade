@@ -580,3 +580,28 @@ body {
   margin: 0 0 16px;
   text-align: center;
 }
+
+/* Нижняя панель статистики */
+.db-status-bar {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 10px 16px;
+  background: #f1f5fd;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  margin-top: -12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.db-status-bar b { color: var(--text); }
+
+.sort-indicator {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  margin-left: 4px;
+}
