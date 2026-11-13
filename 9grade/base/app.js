@@ -202,16 +202,16 @@ function generateQuestions(students) {
 
   qs.push({ type:'table_input', instruction:'Подсчитайте, сколько учеников сдали каждый предмет на 4 и 5 (оценка >= 4). Заполните таблицу.', table:true, correct:{ rus: String(cRus), math: String(cMath), eng: String(cEng) }, explain: `Русский: ${cRus}, Математика: ${cMath}, Английский: ${cEng}.` });
 
-  qs.push({ type:'chart_interactive', instruction:'Выделите таблицу с данными (клик по ней). Затем в верхней панели нажмите «Вставка → Диаграмма...», выберите «Круговая» и нажмите «Готово».', chartData:{ rus: cRus, math: cMath, eng: cEng }, explain:'Круговая диаграмма показывает доли учеников по предметам.' });
+  qs.push({ type:'chart_interactive', instruction:'Выделите таблицу с данными (клик по ней). Затем в верхней панели нажмите «Вставка → Диаграмма...», выберите «Круговая» и нажмите «Готово». Или нажмите «Проверить».', chartData:{ rus: cRus, math: cMath, eng: cEng }, explain:'Круговая диаграмма показывает доли учеников по предметам.' });
 
   /* Блок 5 */
   const boys = students.filter(s => s.gender === 'М').length;
   const girls = students.filter(s => s.gender === 'Ж').length;
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте мальчиков и девочек. Впишите числа в мини-таблицу, выделите её (кликните по ней), затем в верхней панели нажмите «Вставка → Диаграмма...» и выберите «Круговая».', table:true, tableData:[{key:'boys',label:'Мальчики'},{key:'girls',label:'Девочки'}], correct:{ boys: String(boys), girls: String(girls) }, chartLabels:{ boys:'Мальчики', girls:'Девочки' }, chartColors:{ boys:'#4f6ef7', girls:'#f59e0b' }, explain:'Круговая диаграмма показывает соотношение мальчиков и девочек.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте мальчиков и девочек. Впишите числа в мини-таблицу, выделите её (кликните по ней), затем в верхней панели нажмите «Вставка → Диаграмма...» и выберите «Круговая». Или нажмите «Проверить».', table:true, tableData:[{key:'boys',label:'Мальчики'},{key:'girls',label:'Девочки'}], correct:{ boys: String(boys), girls: String(girls) }, chartLabels:{ boys:'Мальчики', girls:'Девочки' }, chartColors:{ boys:'#4f6ef7', girls:'#f59e0b' }, explain:'Круговая диаграмма показывает соотношение мальчиков и девочек.' });
 
   const rights = students.filter(s => s.hand === 'Правша').length;
   const lefts2 = students.filter(s => s.hand === 'Левша').length;
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте правшей и левшей. Впишите числа, выделите таблицу, постройте круговую диаграмму через «Вставка → Диаграмма...».', table:true, tableData:[{key:'right',label:'Правши'},{key:'left',label:'Левши'}], correct:{ right: String(rights), left: String(lefts2) }, chartLabels:{ right:'Правши', left:'Левши' }, chartColors:{ right:'#16a34a', left:'#dc2626' }, explain:'Круговая диаграмма показывает доли правшей и левшей.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте правшей и левшей. Впишите числа, выделите таблицу, постройте круговую диаграмму через «Вставка → Диаграмма...». Или нажмите «Проверить».', table:true, tableData:[{key:'right',label:'Правши'},{key:'left',label:'Левши'}], correct:{ right: String(rights), left: String(lefts2) }, chartLabels:{ right:'Правши', left:'Левши' }, chartColors:{ right:'#16a34a', left:'#dc2626' }, explain:'Круговая диаграмма показывает доли правшей и левшей.' });
 
   const eyeColors = [...new Set(students.map(s => s.eyes))].sort();
   const palette = ['#4f6ef7','#16a34a','#f59e0b','#ef4444','#8b5cf6'];
@@ -222,7 +222,7 @@ function generateQuestions(students) {
     eyeLabels[c] = c;
     eyeColorsMap[c] = palette[i % palette.length];
   });
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте количество учеников с каждым цветом глаз. Впишите числа, выделите таблицу, постройте круговую диаграмму.', table:true, tableData: eyeTableData, correct: eyeCorrect, chartLabels: eyeLabels, chartColors: eyeColorsMap, explain:'Круговая диаграмма показывает распределение по цвету глаз.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте количество учеников с каждым цветом глаз. Впишите числа, выделите таблицу, постройте круговую диаграмму. Или нажмите «Проверить».', table:true, tableData: eyeTableData, correct: eyeCorrect, chartLabels: eyeLabels, chartColors: eyeColorsMap, explain:'Круговая диаграмма показывает распределение по цвету глаз.' });
 
   /* Блок 6: ПОЛНОЦЕННЫЕ (6 штук) */
   for (let i = 0; i < 6; i++) {
@@ -263,7 +263,8 @@ const state = {
   filters: {}, sort: { col: null, dir: 'asc' },
   selectedHeaders: new Set(),
   filterHeaders: new Set(),
-  activeMiniTable: null
+  activeMiniTable: null,
+  activeChartCheck: null
 };
 
 const COLUMNS = [
@@ -329,7 +330,6 @@ function renderTable(container) {
   let html = '<div class="data-toolbar">';
   html += '<span class="data-toolbar-label">Таблица данных</span>';
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
-  // Вставка — САМАЯ ЛЕВАЯ
   html += '<div class="menu-wrapper">';
   html += '<button class="toolbar-btn" id="insertMainBtn" type="button">Вставка ▾</button>';
   html += '<div class="dropdown-menu" id="insertMainMenu" hidden>';
@@ -388,7 +388,6 @@ function renderTable(container) {
 
   container.innerHTML = html;
 
-  // Клик по заголовку
   container.querySelectorAll('.header-cell').forEach(th => {
     th.addEventListener('click', (e) => {
       if (e.target.closest('.sort-btn') || e.target.closest('.filter-select')) return;
@@ -399,7 +398,6 @@ function renderTable(container) {
     });
   });
 
-  // Вставка
   const insertBtn = container.querySelector('#insertMainBtn');
   const insertMenu = container.querySelector('#insertMainMenu');
   insertBtn.addEventListener('click', (e) => {
@@ -416,7 +414,6 @@ function renderTable(container) {
     state.activeMiniTable.onInsert();
   });
 
-  // Сортировка
   container.querySelector('#sortMainBtn').addEventListener('click', () => {
     if (!statsCol) {
       setFeedback('warn', 'Сначала выделите столбец (кликните по заголовку), затем нажмите «Сортировка».');
@@ -427,7 +424,6 @@ function renderTable(container) {
     renderTable(container);
   });
 
-  // Фильтр
   container.querySelector('#filterMainBtn').addEventListener('click', () => {
     if (state.selectedHeaders.size === 0) {
       if (state.filterHeaders.size > 0) {
@@ -444,7 +440,6 @@ function renderTable(container) {
     }
   });
 
-  // Сбросить
   container.querySelector('#resetMainBtn').addEventListener('click', () => {
     state.filters = {};
     state.filterHeaders.clear();
@@ -453,7 +448,6 @@ function renderTable(container) {
     renderTable(container);
   });
 
-  // Фильтры
   container.querySelectorAll('.filter-select').forEach(sel => {
     sel.addEventListener('click', e => e.stopPropagation());
     sel.addEventListener('change', () => {
@@ -488,6 +482,7 @@ function renderQuestion() {
   state.selectedHeaders = new Set();
   state.filterHeaders = new Set();
   state.activeMiniTable = null;
+  state.activeChartCheck = null;
 
   el.instruction.textContent = q.instruction || '';
   el.taskBody.innerHTML = '';
@@ -579,7 +574,7 @@ function renderTableInput(q, c) {
   c.appendChild(table);
 }
 
-/* ---------- Хелпер: тулбар со «Вставка» для задач без главной таблицы ---------- */
+/* ---------- Хелпер: тулбар для мини-таблиц без основной таблицы ---------- */
 function createStandaloneInsertToolbar(c, afterEl) {
   const topbar = document.createElement('div');
   topbar.className = 'data-toolbar';
@@ -596,7 +591,7 @@ function createStandaloneInsertToolbar(c, afterEl) {
     </div>
   `;
   c.insertBefore(topbar, afterEl);
-  
+
   const btn = topbar.querySelector('[data-std-insert-btn]');
   const menu = topbar.querySelector('[data-std-insert-menu]');
   btn.addEventListener('click', (e) => {
@@ -614,7 +609,7 @@ function createStandaloneInsertToolbar(c, afterEl) {
   });
 }
 
-/* ---------- Создание select-обработчика для мини-таблицы ---------- */
+/* ---------- Выделение мини-таблицы ---------- */
 function setupMiniTableSelect(table, statusEl, tryInsertChart) {
   let selected = false;
   const mark = () => {
@@ -639,9 +634,6 @@ function setupMiniTableSelect(table, statusEl, tryInsertChart) {
 
 /* ---------- Тип: chart_interactive ---------- */
 function renderChartInteractive(q, c, hasMainTable) {
-  el.checkBtn.hidden = true;
-  el.nextBtn.hidden = true;
-
   const table = document.createElement('table');
   table.className = 'mini-table';
   table.innerHTML = `<thead><tr><th>Предмет</th><th>Сдали на 4 и 5</th></tr></thead><tbody>
@@ -657,7 +649,6 @@ function renderChartInteractive(q, c, hasMainTable) {
   const chartContainer = document.createElement('div');
   chartContainer.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:16px;margin-top:20px;';
 
-  // Тулбар: если главной таблицы нет — создаём свой
   if (!hasMainTable) {
     c.appendChild(table);
     createStandaloneInsertToolbar(c, c.firstChild);
@@ -669,6 +660,21 @@ function renderChartInteractive(q, c, hasMainTable) {
     c.appendChild(chartContainer);
   }
 
+  const buildChartAndFinish = () => {
+    chartContainer.style.display = 'flex';
+    chartContainer.innerHTML = buildPie(
+      q.chartData,
+      { rus:'Русский', math:'Математика', eng:'Английский' },
+      { rus:'#4f6ef7', math:'#16a34a', eng:'#f59e0b' }
+    );
+    state.answered = true;
+    state.correct++;
+    el.checkBtn.hidden = true;
+    el.nextBtn.hidden = false;
+    updateProgress(true);
+    setFeedback('success', '✅ Диаграмма построена! ' + (q.explain || ''));
+  };
+
   const tryInsertChart = () => {
     openChartWizard({
       onInsert: (chartType, api) => {
@@ -677,19 +683,14 @@ function renderChartInteractive(q, c, hasMainTable) {
           return;
         }
         api.close();
-        chartContainer.style.display = 'flex';
-        chartContainer.innerHTML = buildPie(
-          q.chartData,
-          { rus:'Русский', math:'Математика', eng:'Английский' },
-          { rus:'#4f6ef7', math:'#16a34a', eng:'#f59e0b' }
-        );
-        state.answered = true;
-        state.correct++;
-        el.nextBtn.hidden = false;
-        updateProgress(true);
-        setFeedback('success', '✅ Диаграмма построена! ' + (q.explain || ''));
+        buildChartAndFinish();
       }
     });
+  };
+
+  // Кнопка «Проверить» для этого типа — сразу строит диаграмму
+  state.activeChartCheck = () => {
+    buildChartAndFinish();
   };
 
   setupMiniTableSelect(table, statusEl, tryInsertChart);
@@ -697,9 +698,6 @@ function renderChartInteractive(q, c, hasMainTable) {
 
 /* ---------- Тип: chart_combined ---------- */
 function renderChartCombined(q, c, hasMainTable) {
-  el.checkBtn.hidden = true;
-  el.nextBtn.hidden = true;
-
   const table = document.createElement('table');
   table.className = 'mini-table';
   let thead = '<thead><tr><th>Категория</th><th>Количество</th></tr></thead>';
@@ -733,6 +731,45 @@ function renderChartCombined(q, c, hasMainTable) {
     c.appendChild(chartContainer);
   }
 
+  const checkAndFinish = (requireAllFilled) => {
+    let hasEmpty = false;
+    for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
+    if (hasEmpty) {
+      setFeedback('warn', 'Заполните все ячейки в таблице.');
+      return;
+    }
+
+    let ok = true;
+    for (const k in state.selection) {
+      const inp = state.selection[k];
+      if (inp.value.trim() === q.correct[k]) {
+        inp.classList.add('ok');
+        inp.classList.remove('wrong');
+      } else {
+        ok = false;
+        inp.classList.remove('ok');
+        inp.classList.add('wrong');
+        inp.value = q.correct[k]; // показываем правильное
+      }
+      inp.disabled = true;
+    }
+
+    // Строим диаграмму с правильными значениями
+    chartContainer.style.display = 'flex';
+    const chartData = {};
+    for (const k in q.correct) chartData[k] = Number(q.correct[k]);
+    chartContainer.innerHTML = buildPie(chartData, q.chartLabels, q.chartColors);
+
+    state.answered = true;
+    if (ok) state.correct++;
+    el.checkBtn.hidden = true;
+    el.nextBtn.hidden = false;
+    updateProgress(true);
+
+    if (ok) setFeedback('success', '✅ Правильно! ' + (q.explain || ''));
+    else setFeedback('error', '❌ Есть ошибки. Правильные значения подсвечены. ' + (q.explain || ''));
+  };
+
   const tryInsertChart = () => {
     openChartWizard({
       onInsert: (chartType, api) => {
@@ -740,56 +777,27 @@ function renderChartCombined(q, c, hasMainTable) {
           api.showMessage('Для сравнения частей целого нужна круговая диаграмма.');
           return;
         }
-        let hasEmpty = false;
-        for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
-        if (hasEmpty) {
-          api.close();
-          setFeedback('warn', 'Заполните все ячейки в таблице перед построением диаграммы.');
-          return;
-        }
-        let ok = true;
-        for (const k in state.selection) {
-          if (state.selection[k].value.trim() !== q.correct[k]) { ok = false; state.selection[k].classList.add('wrong'); }
-          else state.selection[k].classList.add('ok');
-        }
-        if (!ok) {
-          api.close();
-          setTimeout(() => {
-            for (const k in state.selection) state.selection[k].classList.remove('ok', 'wrong');
-          }, 1500);
-          setFeedback('error', '❌ Значения неверные. Исправьте и попробуйте снова.');
-          return;
-        }
-        for (const k in state.selection) state.selection[k].disabled = true;
         api.close();
-        chartContainer.style.display = 'flex';
-        const chartData = {};
-        for (const k in q.correct) chartData[k] = Number(q.correct[k]);
-        chartContainer.innerHTML = buildPie(chartData, q.chartLabels, q.chartColors);
-        state.answered = true;
-        state.correct++;
-        el.nextBtn.hidden = false;
-        updateProgress(true);
-        setFeedback('success', '✅ Диаграмма построена! ' + (q.explain || ''));
+        checkAndFinish(true);
       }
     });
   };
+
+  state.activeChartCheck = () => checkAndFinish(true);
 
   setupMiniTableSelect(table, statusEl, tryInsertChart);
 }
 
 /* ---------- Тип: full_chart и full_chart_avg ---------- */
 function renderFullChart(q, c, hasAvg) {
-  el.checkBtn.hidden = true;
-  el.nextBtn.hidden = true;
-
   const intro = document.createElement('div');
   intro.className = 'formula-box';
   intro.innerHTML = '📌 <b>Порядок работы:</b><br>' +
     '① С помощью фильтров (🔽 Фильтр) определите три значения.<br>' +
     '② Впишите их в мини-таблицу.<br>' +
     '③ Выделите мини-таблицу (кликните по ней).<br>' +
-    '④ «Вставка → Диаграмма...» → выберите «Круговая» → «Готово».';
+    '④ «Вставка → Диаграмма...» → выберите «Круговая» → «Готово».<br>' +
+    '<i>Или нажмите «Проверить», чтобы увидеть результат сразу.</i>';
   c.appendChild(intro);
 
   const table = document.createElement('table');
@@ -830,6 +838,72 @@ function renderFullChart(q, c, hasAvg) {
   chartContainer.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:16px;margin-top:20px;';
   c.appendChild(chartContainer);
 
+  const checkAndFinish = (requireAllFilled) => {
+    // Проверяем 3 значения
+    let hasEmpty = false;
+    for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
+    if (hasEmpty) {
+      setFeedback('warn', 'Заполните все три ячейки в мини-таблице.');
+      return;
+    }
+
+    if (hasAvg && avgInput) {
+      if (!avgInput.value.trim()) {
+        setFeedback('warn', 'Введите ответ на дополнительный вопрос про средний балл.');
+        return;
+      }
+    }
+
+    let ok = true;
+    for (const k in state.selection) {
+      const inp = state.selection[k];
+      const idx = +k.slice(1);
+      if (inp.value.trim() === q.filterQuestions[idx].correct) {
+        inp.classList.add('ok');
+        inp.classList.remove('wrong');
+      } else {
+        ok = false;
+        inp.classList.remove('ok');
+        inp.classList.add('wrong');
+        inp.value = q.filterQuestions[idx].correct;
+      }
+      inp.disabled = true;
+    }
+
+    if (hasAvg && avgInput) {
+      if (!numsEqual(avgInput.value, q.avgQuestion.correct)) {
+        ok = false;
+        avgInput.classList.add('wrong');
+        avgInput.classList.remove('ok');
+        avgInput.value = q.avgQuestion.correct;
+      } else {
+        avgInput.classList.add('ok');
+        avgInput.classList.remove('wrong');
+      }
+      avgInput.disabled = true;
+    }
+
+    // Строим диаграмму с правильными значениями
+    chartContainer.style.display = 'flex';
+    const chartData = {};
+    const labels = {};
+    q.filterQuestions.forEach((fq, i) => {
+      chartData['q' + i] = Number(fq.correct);
+      labels['q' + i] = 'Вопрос ' + (i + 1);
+    });
+    const colors = { q0: '#4f6ef7', q1: '#16a34a', q2: '#f59e0b' };
+    chartContainer.innerHTML = buildPie(chartData, labels, colors);
+
+    state.answered = true;
+    if (ok) state.correct++;
+    el.checkBtn.hidden = true;
+    el.nextBtn.hidden = false;
+    updateProgress(true);
+
+    if (ok) setFeedback('success', '✅ Правильно! Диаграмма построена.');
+    else setFeedback('error', '❌ Есть ошибки. Правильные ответы подсвечены.');
+  };
+
   const tryInsertChart = () => {
     openChartWizard({
       onInsert: (chartType, api) => {
@@ -837,61 +911,13 @@ function renderFullChart(q, c, hasAvg) {
           api.showMessage('Для сравнения частей целого нужна круговая диаграмма.');
           return;
         }
-        let allOk = true;
-        for (const k in state.selection) {
-          const inp = state.selection[k];
-          const idx = +k.slice(1);
-          if (!inp.value.trim()) { allOk = false; inp.classList.add('wrong'); }
-          else if (inp.value.trim() !== q.filterQuestions[idx].correct) {
-            allOk = false; inp.classList.add('wrong');
-          } else {
-            inp.classList.remove('wrong'); inp.classList.add('ok');
-          }
-        }
-        if (!allOk) {
-          api.close();
-          setTimeout(() => {
-            for (const k in state.selection) state.selection[k].classList.remove('ok', 'wrong');
-          }, 1500);
-          setFeedback('error', '❌ Не все значения верны. Исправьте и попробуйте снова.');
-          return;
-        }
-        if (hasAvg && avgInput) {
-          if (!avgInput.value.trim()) {
-            api.close();
-            setFeedback('warn', 'Введите ответ на дополнительный вопрос про средний балл.');
-            return;
-          }
-          if (!numsEqual(avgInput.value, q.avgQuestion.correct)) {
-            api.close();
-            avgInput.classList.add('wrong');
-            setTimeout(() => avgInput.classList.remove('wrong'), 1500);
-            setFeedback('error', '❌ Неверный средний балл. Проверьте расчёт.');
-            return;
-          }
-          avgInput.classList.remove('wrong');
-          avgInput.classList.add('ok');
-        }
         api.close();
-        chartContainer.style.display = 'flex';
-        const chartData = {};
-        const labels = {};
-        q.filterQuestions.forEach((fq, i) => {
-          chartData['q' + i] = Number(fq.correct);
-          labels['q' + i] = 'Вопрос ' + (i + 1);
-        });
-        const colors = { q0: '#4f6ef7', q1: '#16a34a', q2: '#f59e0b' };
-        chartContainer.innerHTML = buildPie(chartData, labels, colors);
-        for (const k in state.selection) state.selection[k].disabled = true;
-        if (avgInput) avgInput.disabled = true;
-        state.answered = true;
-        state.correct++;
-        el.nextBtn.hidden = false;
-        updateProgress(true);
-        setFeedback('success', '✅ Отлично! Диаграмма построена.');
+        checkAndFinish(true);
       }
     });
   };
+
+  state.activeChartCheck = () => checkAndFinish(true);
 
   setupMiniTableSelect(table, statusEl, tryInsertChart);
 }
@@ -998,8 +1024,17 @@ function markTable(q) {
 function checkAnswer() {
   if (state.answered) return;
   const q = currentQuestion();
-  if (q.type === 'full_chart' || q.type === 'full_chart_avg' ||
-      q.type === 'chart_interactive' || q.type === 'chart_combined') return;
+
+  // Задания с диаграммами — делегируем активной функции
+  if (q.type === 'chart_interactive' || q.type === 'chart_combined' ||
+      q.type === 'full_chart' || q.type === 'full_chart_avg') {
+    if (typeof state.activeChartCheck === 'function') {
+      state.activeChartCheck();
+    } else {
+      setFeedback('warn', 'Сначала выделите мини-таблицу или заполните её.');
+    }
+    return;
+  }
 
   let ok = false, corrText = '';
   if (q.type === 'choice') {
