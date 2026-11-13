@@ -1,6 +1,6 @@
 /* =========================================================
    ТРЕНАЖЁР: Файловая система (30 заданий)
-   ========================================================= */
+   ========================================================== */
 
 const QUESTIONS = [
   /* ---------- 1-6: ПОНЯТИЯ ---------- */
@@ -472,11 +472,12 @@ function renderQuestion() {
   else if (q.type === 'match')  renderMatch(q);
 }
 
-/* --- тип 1: выбор одного варианта --- */
+/* --- тип 1: выбор одного варианта (с перемешиванием) --- */
 function renderChoice(q) {
   const wrap = document.createElement('div');
   wrap.className = 'options';
-  q.options.forEach((opt) => {
+  const shuffledOptions = shuffle(q.options);   // <-- перемешиваем
+  shuffledOptions.forEach((opt) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'option';
@@ -491,12 +492,13 @@ function renderChoice(q) {
   el.taskBody.appendChild(wrap);
 }
 
-/* --- тип 2: множественный выбор --- */
+/* --- тип 2: множественный выбор (с перемешиванием) --- */
 function renderMulti(q) {
   state.selection = new Set();
   const palette = document.createElement('div');
   palette.className = 'palette';
-  q.options.forEach((opt) => {
+  const shuffledOptions = shuffle(q.options);   // <-- перемешиваем
+  shuffledOptions.forEach((opt) => {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'card';
@@ -575,14 +577,15 @@ function renderBuild(q) {
   refreshBuilt();
 }
 
-/* --- тип 4: сопоставление --- */
+/* --- тип 4: сопоставление (с перемешиванием строк) --- */
 function renderMatch(q) {
   state.matchSel = {};
   const list = document.createElement('div');
   list.className = 'match-list';
   const rightOptions = shuffle(q.pairs.map((p) => p.right));
+  const shuffledPairs = shuffle(q.pairs);   // <-- перемешиваем строки
 
-  q.pairs.forEach((pair) => {
+  shuffledPairs.forEach((pair) => {
     const row = document.createElement('div');
     row.className = 'match-row';
 
