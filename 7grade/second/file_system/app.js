@@ -81,72 +81,42 @@ const QUESTIONS = [
   {
     type: 'choice',
     instruction: 'Из папки C:\\учёба\\математика спустились на один уровень вниз в папку ГИА. Где вы оказались?',
-    options: [
-      'C:\\учёба\\математика\\ГИА',
-      'C:\\учёба\\ГИА',
-      'C:\\ГИА',
-      'C:\\учёба'
-    ],
+    options: ['C:\\учёба\\математика\\ГИА', 'C:\\учёба\\ГИА', 'C:\\ГИА', 'C:\\учёба'],
     correct: 'C:\\учёба\\математика\\ГИА',
     explain: 'Спуск вниз = добавить имя дочерней папки в конец пути.'
   },
   {
     type: 'choice',
     instruction: 'Из папки C:\\учёба\\математика\\ГИА поднялись на один уровень вверх. Где вы оказались?',
-    options: [
-      'C:\\учёба\\математика',
-      'C:\\учёба',
-      'C:\\',
-      'C:\\учёба\\математика\\ГИА'
-    ],
+    options: ['C:\\учёба\\математика', 'C:\\учёба', 'C:\\', 'C:\\учёба\\математика\\ГИА'],
     correct: 'C:\\учёба\\математика',
     explain: 'Подъём наверх = убрать последнюю папку из пути.'
   },
   {
     type: 'choice',
     instruction: 'Из папки C:\\Музыка спустились в папку Хиты. Где вы оказались?',
-    options: [
-      'C:\\Музыка\\Хиты',
-      'C:\\Хиты',
-      'C:\\',
-      'C:\\Музыка'
-    ],
+    options: ['C:\\Музыка\\Хиты', 'C:\\Хиты', 'C:\\', 'C:\\Музыка'],
     correct: 'C:\\Музыка\\Хиты',
     explain: 'Спуск вниз добавляет имя папки в конец пути.'
   },
   {
     type: 'choice',
     instruction: 'Из папки C:\\Музыка\\Хиты\\Ретро поднялись на один уровень вверх. Где вы оказались?',
-    options: [
-      'C:\\Музыка\\Хиты',
-      'C:\\Музыка',
-      'C:\\Музыка\\Хиты\\Ретро',
-      'C:\\'
-    ],
+    options: ['C:\\Музыка\\Хиты', 'C:\\Музыка', 'C:\\Музыка\\Хиты\\Ретро', 'C:\\'],
     correct: 'C:\\Музыка\\Хиты',
     explain: 'Убрали последнюю папку «Ретро» — и оказались в родительской папке.'
   },
   {
     type: 'choice',
     instruction: 'Из папки C:\\Проекты\\2024\\Отчёты поднялись дважды на уровень вверх. Где вы оказались?',
-    options: [
-      'C:\\Проекты',
-      'C:\\Проекты\\2024',
-      'C:\\',
-      'C:\\Проекты\\2024\\Отчёты'
-    ],
+    options: ['C:\\Проекты', 'C:\\Проекты\\2024', 'C:\\', 'C:\\Проекты\\2024\\Отчёты'],
     correct: 'C:\\Проекты',
     explain: 'Первый подъём → C:\\Проекты\\2024, второй → C:\\Проекты.'
   },
   {
     type: 'choice',
     instruction: 'Из папки C:\\Проекты спустились в папку 2024, затем — в папку Отчёты. Где вы оказались?',
-    options: [
-      'C:\\Проекты\\2024\\Отчёты',
-      'C:\\Проекты\\Отчёты',
-      'C:\\Проекты\\2024',
-      'C:\\Отчёты'
-    ],
+    options: ['C:\\Проекты\\2024\\Отчёты', 'C:\\Проекты\\Отчёты', 'C:\\Проекты\\2024', 'C:\\Отчёты'],
     correct: 'C:\\Проекты\\2024\\Отчёты',
     explain: 'Каждый спуск добавляет имя папки в конец пути.'
   },
@@ -234,12 +204,7 @@ const QUESTIONS = [
   {
     type: 'choice',
     instruction: 'Петя начал работу в папке C:\\Игры. Он спустился в папку Стратегии, поднялся на один уровень вверх, затем спустился в папку Аркады. Где он оказался?',
-    options: [
-      'C:\\Игры\\Аркады',
-      'C:\\Аркады',
-      'C:\\Игры\\Стратегии\\Аркады',
-      'C:\\Стратегии'
-    ],
+    options: ['C:\\Игры\\Аркады', 'C:\\Аркады', 'C:\\Игры\\Стратегии\\Аркады', 'C:\\Стратегии'],
     correct: 'C:\\Игры\\Аркады',
     explain: 'Старт C:\\Игры → вниз в Стратегии (C:\\Игры\\Стратегии) → вверх (C:\\Игры) → вниз в Аркады.'
   },
@@ -341,12 +306,7 @@ const QUESTIONS = [
   {
     type: 'choice',
     instruction: 'В папке C:\\Музыка\\Хиты создали новую папку Новинки. Какой у неё полный путь?',
-    options: [
-      'C:\\Музыка\\Хиты\\Новинки',
-      'C:\\Новинки',
-      'C:\\Музыка\\Новинки',
-      'C:\\Музыка\\Хиты'
-    ],
+    options: ['C:\\Музыка\\Хиты\\Новинки', 'C:\\Новинки', 'C:\\Музыка\\Новинки', 'C:\\Музыка\\Хиты'],
     correct: 'C:\\Музыка\\Хиты\\Новинки',
     explain: 'Новая папка создаётся внутри текущей, поэтому её путь = путь текущей + имя новой.'
   },
@@ -364,16 +324,47 @@ const QUESTIONS = [
   {
     type: 'choice',
     instruction: 'Пользователь находится в папке C:\\Документы\\Школа\\7класс. Он поднялся на один уровень вверх, а затем спустился в папку 8класс. Где он оказался?',
-    options: [
-      'C:\\Документы\\Школа\\8класс',
-      'C:\\Документы\\8класс',
-      'C:\\Документы\\Школа\\7класс',
-      'C:\\8класс'
-    ],
+    options: ['C:\\Документы\\Школа\\8класс', 'C:\\Документы\\8класс', 'C:\\Документы\\Школа\\7класс', 'C:\\8класс'],
     correct: 'C:\\Документы\\Школа\\8класс',
     explain: 'Подъём из 7класс → C:\\Документы\\Школа, спуск в 8класс → C:\\Документы\\Школа\\8класс.'
   }
 ];
+
+/* ---------------------- КРИПТОСТОЙКИЙ RANDOM ---------------------- */
+
+function cryptoRandomInt(max) {
+  if (window.crypto && window.crypto.getRandomValues) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return arr[0] % max;
+  }
+  return Math.floor(Math.random() * max);
+}
+
+/* ---------------------- ПЕРЕМЕШИВАНИЕ (Fisher-Yates + крипто) ---------------------- */
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = cryptoRandomInt(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Перемешивает options и ГАРАНТИРУЕТ, что правильный ответ НЕ на первом месте.
+ * Это сознательное небольшое смещение, чтобы полностью исключить ситуацию
+ * "правильный ответ всегда первый".
+ */
+function shuffleOptionsGuaranteed(options, correctValue) {
+  let a = shuffle(options);
+  if (a.length > 1 && a[0] === correctValue) {
+    const j = 1 + cryptoRandomInt(a.length - 1);
+    [a[0], a[j]] = [a[j], a[0]];
+  }
+  return a;
+}
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
 
@@ -405,15 +396,6 @@ const el = {
 };
 
 /* ---------------------- УТИЛИТЫ ---------------------- */
-
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 function currentQuestion() { return QUESTIONS[state.qIndex]; }
 
@@ -472,12 +454,13 @@ function renderQuestion() {
   else if (q.type === 'match')  renderMatch(q);
 }
 
-/* --- тип 1: выбор одного варианта (с перемешиванием) --- */
+/* --- тип 1: выбор одного варианта --- */
 function renderChoice(q) {
   const wrap = document.createElement('div');
   wrap.className = 'options';
-  const shuffledOptions = shuffle(q.options);   // <-- перемешиваем
-  shuffledOptions.forEach((opt) => {
+  // ГАРАНТИРОВАННО перемешиваем: правильный ответ НЕ будет первым
+  const opts = shuffleOptionsGuaranteed(q.options, q.correct);
+  opts.forEach((opt) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'option';
@@ -492,13 +475,13 @@ function renderChoice(q) {
   el.taskBody.appendChild(wrap);
 }
 
-/* --- тип 2: множественный выбор (с перемешиванием) --- */
+/* --- тип 2: множественный выбор --- */
 function renderMulti(q) {
   state.selection = new Set();
   const palette = document.createElement('div');
   palette.className = 'palette';
-  const shuffledOptions = shuffle(q.options);   // <-- перемешиваем
-  shuffledOptions.forEach((opt) => {
+  const opts = shuffle(q.options);
+  opts.forEach((opt) => {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'card';
@@ -577,15 +560,21 @@ function renderBuild(q) {
   refreshBuilt();
 }
 
-/* --- тип 4: сопоставление (с перемешиванием строк) --- */
+/* --- тип 4: сопоставление --- */
 function renderMatch(q) {
   state.matchSel = {};
   const list = document.createElement('div');
   list.className = 'match-list';
   const rightOptions = shuffle(q.pairs.map((p) => p.right));
-  const shuffledPairs = shuffle(q.pairs);   // <-- перемешиваем строки
+  const pairs = shuffle(q.pairs);
 
-  shuffledPairs.forEach((pair) => {
+  // Гарантируем, что первая левая пара НЕ соответствует первой правой опции
+  if (pairs.length > 1 && rightOptions[0] === pairs[0].right) {
+    const j = 1 + cryptoRandomInt(rightOptions.length - 1);
+    [rightOptions[0], rightOptions[j]] = [rightOptions[j], rightOptions[0]];
+  }
+
+  pairs.forEach((pair) => {
     const row = document.createElement('div');
     row.className = 'match-row';
 
