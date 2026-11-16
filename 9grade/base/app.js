@@ -202,16 +202,16 @@ function generateQuestions(students) {
 
   qs.push({ type:'table_input', instruction:'Подсчитайте, сколько учеников сдали каждый предмет на 4 и 5 (оценка >= 4). Заполните таблицу.', table:true, correct:{ rus: String(cRus), math: String(cMath), eng: String(cEng) }, explain: `Русский: ${cRus}, Математика: ${cMath}, Английский: ${cEng}.` });
 
-  qs.push({ type:'chart_interactive', instruction:'Выделите таблицу с данными (клик по ней). Затем в верхней панели нажмите «Вставка → Диаграмма...», выберите «Круговая» и нажмите «Готово». Или нажмите «Проверить».', chartData:{ rus: cRus, math: cMath, eng: cEng }, explain:'Круговая диаграмма показывает доли учеников по предметам.' });
+  qs.push({ type:'chart_interactive', instruction:'Выделите таблицу с данными (клик по ней), затем в верхней панели нажмите «Вставка → Диаграмма...», выберите «Круговая» и нажмите «Готово». Кнопка «Проверить» без построенной диаграммы считается ошибкой.', chartData:{ rus: cRus, math: cMath, eng: cEng }, explain:'Круговая диаграмма показывает доли учеников по предметам.' });
 
   /* Блок 5 */
   const boys = students.filter(s => s.gender === 'М').length;
   const girls = students.filter(s => s.gender === 'Ж').length;
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте мальчиков и девочек. Впишите числа в мини-таблицу, выделите её (кликните по ней), затем в верхней панели нажмите «Вставка → Диаграмма...» и выберите «Круговая». Или нажмите «Проверить».', table:true, tableData:[{key:'boys',label:'Мальчики'},{key:'girls',label:'Девочки'}], correct:{ boys: String(boys), girls: String(girls) }, chartLabels:{ boys:'Мальчики', girls:'Девочки' }, chartColors:{ boys:'#4f6ef7', girls:'#f59e0b' }, explain:'Круговая диаграмма показывает соотношение мальчиков и девочек.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте мальчиков и девочек. Впишите числа в мини-таблицу, выделите её, затем постройте круговую диаграмму через «Вставка → Диаграмма...». Без диаграммы задание не засчитывается.', table:true, tableData:[{key:'boys',label:'Мальчики'},{key:'girls',label:'Девочки'}], correct:{ boys: String(boys), girls: String(girls) }, chartLabels:{ boys:'Мальчики', girls:'Девочки' }, chartColors:{ boys:'#4f6ef7', girls:'#f59e0b' }, explain:'Круговая диаграмма показывает соотношение мальчиков и девочек.' });
 
   const rights = students.filter(s => s.hand === 'Правша').length;
   const lefts2 = students.filter(s => s.hand === 'Левша').length;
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте правшей и левшей. Впишите числа, выделите таблицу, постройте круговую диаграмму через «Вставка → Диаграмма...». Или нажмите «Проверить».', table:true, tableData:[{key:'right',label:'Правши'},{key:'left',label:'Левши'}], correct:{ right: String(rights), left: String(lefts2) }, chartLabels:{ right:'Правши', left:'Левши' }, chartColors:{ right:'#16a34a', left:'#dc2626' }, explain:'Круговая диаграмма показывает доли правшей и левшей.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте правшей и левшей. Впишите числа, выделите таблицу, постройте круговую диаграмму. Без диаграммы задание не засчитывается.', table:true, tableData:[{key:'right',label:'Правши'},{key:'left',label:'Левши'}], correct:{ right: String(rights), left: String(lefts2) }, chartLabels:{ right:'Правши', left:'Левши' }, chartColors:{ right:'#16a34a', left:'#dc2626' }, explain:'Круговая диаграмма показывает доли правшей и левшей.' });
 
   const eyeColors = [...new Set(students.map(s => s.eyes))].sort();
   const palette = ['#4f6ef7','#16a34a','#f59e0b','#ef4444','#8b5cf6'];
@@ -222,7 +222,7 @@ function generateQuestions(students) {
     eyeLabels[c] = c;
     eyeColorsMap[c] = palette[i % palette.length];
   });
-  qs.push({ type:'chart_combined', instruction:'Подсчитайте количество учеников с каждым цветом глаз. Впишите числа, выделите таблицу, постройте круговую диаграмму. Или нажмите «Проверить».', table:true, tableData: eyeTableData, correct: eyeCorrect, chartLabels: eyeLabels, chartColors: eyeColorsMap, explain:'Круговая диаграмма показывает распределение по цвету глаз.' });
+  qs.push({ type:'chart_combined', instruction:'Подсчитайте количество учеников с каждым цветом глаз. Впишите числа, выделите таблицу, постройте круговую диаграмму. Без диаграммы задание не засчитывается.', table:true, tableData: eyeTableData, correct: eyeCorrect, chartLabels: eyeLabels, chartColors: eyeColorsMap, explain:'Круговая диаграмма показывает распределение по цвету глаз.' });
 
   /* Блок 6: ПОЛНОЦЕННЫЕ (6 штук) */
   for (let i = 0; i < 6; i++) {
@@ -264,7 +264,9 @@ const state = {
   selectedHeaders: new Set(),
   filterHeaders: new Set(),
   activeMiniTable: null,
-  activeChartCheck: null
+  activeChartCheck: null,
+  chartBuilt: false,
+  warnedNoChart: false
 };
 
 const COLUMNS = [
@@ -472,6 +474,24 @@ function updateProgress(done) {
   el.progressFill.style.width = Math.round((d / total) * 100) + '%';
 }
 
+/* ---------- Общая логика «Проверить» для диаграмм ---------- */
+function handleChartCheckNoDiagram() {
+  // Диаграмма не была вставлена
+  if (!state.warnedNoChart) {
+    state.warnedNoChart = true;
+    setFeedback('warn',
+      '⚠️ Вы не вставили диаграмму через «Вставка → Диаграмма...».\n' +
+      'Задание будет засчитано как ошибка. Нажмите «Проверить» ещё раз, чтобы перейти к следующему заданию без балла.');
+    return;
+  }
+  // Подтверждено — фиксируем ошибку и открываем «Далее»
+  state.answered = true;
+  el.checkBtn.hidden = true;
+  el.nextBtn.hidden = false;
+  updateProgress(true);
+  setFeedback('error', '❌ Диаграмма не была вставлена. Ответ не засчитан.');
+}
+
 /* ---------- Рендер вопроса ---------- */
 function renderQuestion() {
   const q = currentQuestion();
@@ -483,6 +503,8 @@ function renderQuestion() {
   state.filterHeaders = new Set();
   state.activeMiniTable = null;
   state.activeChartCheck = null;
+  state.chartBuilt = false;
+  state.warnedNoChart = false;
 
   el.instruction.textContent = q.instruction || '';
   el.taskBody.innerHTML = '';
@@ -683,13 +705,17 @@ function renderChartInteractive(q, c, hasMainTable) {
           return;
         }
         api.close();
+        state.chartBuilt = true;
         buildChartAndFinish();
       }
     });
   };
 
-  // Кнопка «Проверить» для этого типа — сразу строит диаграмму
   state.activeChartCheck = () => {
+    if (!state.chartBuilt) {
+      handleChartCheckNoDiagram();
+      return;
+    }
     buildChartAndFinish();
   };
 
@@ -731,7 +757,7 @@ function renderChartCombined(q, c, hasMainTable) {
     c.appendChild(chartContainer);
   }
 
-  const checkAndFinish = (requireAllFilled) => {
+  const checkAndFinish = () => {
     let hasEmpty = false;
     for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
     if (hasEmpty) {
@@ -749,12 +775,11 @@ function renderChartCombined(q, c, hasMainTable) {
         ok = false;
         inp.classList.remove('ok');
         inp.classList.add('wrong');
-        inp.value = q.correct[k]; // показываем правильное
+        inp.value = q.correct[k];
       }
       inp.disabled = true;
     }
 
-    // Строим диаграмму с правильными значениями
     chartContainer.style.display = 'flex';
     const chartData = {};
     for (const k in q.correct) chartData[k] = Number(q.correct[k]);
@@ -778,12 +803,19 @@ function renderChartCombined(q, c, hasMainTable) {
           return;
         }
         api.close();
-        checkAndFinish(true);
+        state.chartBuilt = true;
+        checkAndFinish();
       }
     });
   };
 
-  state.activeChartCheck = () => checkAndFinish(true);
+  state.activeChartCheck = () => {
+    if (!state.chartBuilt) {
+      handleChartCheckNoDiagram();
+      return;
+    }
+    checkAndFinish();
+  };
 
   setupMiniTableSelect(table, statusEl, tryInsertChart);
 }
@@ -797,7 +829,7 @@ function renderFullChart(q, c, hasAvg) {
     '② Впишите их в мини-таблицу.<br>' +
     '③ Выделите мини-таблицу (кликните по ней).<br>' +
     '④ «Вставка → Диаграмма...» → выберите «Круговая» → «Готово».<br>' +
-    '<i>Или нажмите «Проверить», чтобы увидеть результат сразу.</i>';
+    '⚠️ Без вставленной диаграммы задание не засчитывается.';
   c.appendChild(intro);
 
   const table = document.createElement('table');
@@ -838,8 +870,7 @@ function renderFullChart(q, c, hasAvg) {
   chartContainer.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:16px;margin-top:20px;';
   c.appendChild(chartContainer);
 
-  const checkAndFinish = (requireAllFilled) => {
-    // Проверяем 3 значения
+  const checkAndFinish = () => {
     let hasEmpty = false;
     for (const k in state.selection) if (!state.selection[k].value.trim()) hasEmpty = true;
     if (hasEmpty) {
@@ -847,11 +878,9 @@ function renderFullChart(q, c, hasAvg) {
       return;
     }
 
-    if (hasAvg && avgInput) {
-      if (!avgInput.value.trim()) {
-        setFeedback('warn', 'Введите ответ на дополнительный вопрос про средний балл.');
-        return;
-      }
+    if (hasAvg && avgInput && !avgInput.value.trim()) {
+      setFeedback('warn', 'Введите ответ на дополнительный вопрос про средний балл.');
+      return;
     }
 
     let ok = true;
@@ -883,7 +912,6 @@ function renderFullChart(q, c, hasAvg) {
       avgInput.disabled = true;
     }
 
-    // Строим диаграмму с правильными значениями
     chartContainer.style.display = 'flex';
     const chartData = {};
     const labels = {};
@@ -912,12 +940,19 @@ function renderFullChart(q, c, hasAvg) {
           return;
         }
         api.close();
-        checkAndFinish(true);
+        state.chartBuilt = true;
+        checkAndFinish();
       }
     });
   };
 
-  state.activeChartCheck = () => checkAndFinish(true);
+  state.activeChartCheck = () => {
+    if (!state.chartBuilt) {
+      handleChartCheckNoDiagram();
+      return;
+    }
+    checkAndFinish();
+  };
 
   setupMiniTableSelect(table, statusEl, tryInsertChart);
 }
@@ -1025,7 +1060,6 @@ function checkAnswer() {
   if (state.answered) return;
   const q = currentQuestion();
 
-  // Задания с диаграммами — делегируем активной функции
   if (q.type === 'chart_interactive' || q.type === 'chart_combined' ||
       q.type === 'full_chart' || q.type === 'full_chart_avg') {
     if (typeof state.activeChartCheck === 'function') {
