@@ -22,6 +22,13 @@ const GRADES = [
         desc: 'Папки, файлы, полные пути, переходы вверх и вниз по дереву каталогов, задачи с перемещением и удалением.',
         emoji: '📁',
         path: '7grade/second/file_system/index.html'
+      },
+      {
+        quarter: 'II четверть',
+        title: 'Расширения файлов',
+        desc: 'Типы файлов, категории расширений и соответствия.',
+        emoji: '📁',
+        path: '7grade/second/file_ext/index.html'
       }
     ]
   },
@@ -69,13 +76,6 @@ const GRADES = [
         desc: 'Нахождение количества путей из одной вершины в другую по схеме дорог.',
         emoji: '🕸️',
         path: '9grade/graphs/index.html'
-      },
-       {
-        quarter: 'II четверть',
-        title: 'Расширения файлов',
-        desc: 'Типы файлов, категории расширений и соответствия.',
-        emoji: '📁',
-        path: '7grade/second/file_ext/index.html'
       }
     ]
   },
