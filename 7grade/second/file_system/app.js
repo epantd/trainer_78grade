@@ -1,9 +1,224 @@
 /* =========================================================
-   ТРЕНАЖЁР: Файловая система (30 заданий)
+   ТРЕНАЖЁР: Файловая система (44 задания)
+   18 статических + 15 навигационных + 11 на сборку пути
    ========================================================== */
 
-const QUESTIONS = [
-  /* ---------- 1-6: ПОНЯТИЯ ---------- */
+/* ---------------------- КРИПТОСТОЙКИЙ RANDOM ---------------------- */
+
+function cryptoRandomInt(max) {
+  if (window.crypto && window.crypto.getRandomValues) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return arr[0] % max;
+  }
+  return Math.floor(Math.random() * max);
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = cryptoRandomInt(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function shuffleOptionsGuaranteed(options, correctValue) {
+  let a = shuffle(options);
+  if (a.length > 1 && a[0] === correctValue) {
+    const j = 1 + cryptoRandomInt(a.length - 1);
+    [a[0], a[j]] = [a[j], a[0]];
+  }
+  return a;
+}
+
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[cryptoRandomInt(arr.length)]; }
+function pickN(arr, n) { return shuffle(arr.slice()).slice(0, n); }
+
+/* ---------------------- ПУЛЫ ДАННЫХ ---------------------- */
+
+const FOLDER_NAMES = [
+  'Документы', 'Музыка', 'Проекты', 'Работа', 'Учёба', 'Игры',
+  'Фото', 'Видео', 'Загрузки', 'Архив', '2024', '2025',
+  'Школа', 'ДЗ', 'Отчёты', 'Личное', 'Лето', 'Зима',
+  'Хиты', 'Ретро', 'Фильмы', 'Семья'
+];
+
+const FILE_NAMES = [
+  'ДЗ.txt', 'report.docx', 'song.mp3', 'photo.jpg', 'план.txt',
+  'video.mp4', 'note.txt', 'presentation.pptx', 'data.xlsx',
+  'конспект.txt', 'рисунок.png', 'запись.wav'
+];
+
+/* ---------------------- ГЕНЕРАТОР: «Где вы оказались?» ---------------------- */
+
+function generateNavigationTask() {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    // Стартовый путь: 1-3 уникальные папки
+    const startDepth = randInt(1, 3);
+    const usedFolders = new Set();
+    const startFolders = [];
+    for (let i = 0; i < startDepth; i++) {
+      let f, tries = 0;
+      do { f = pick(FOLDER_NAMES); tries++; } while (usedFolders.has(f) && tries < 50);
+      usedFolders.add(f);
+      startFolders.push(f);
+    }
+
+    const numMoves = randInt(2, 4);
+    const path = [...startFolders];
+    const moves = [];
+    let valid = true;
+
+    for (let i = 0; i < numMoves; i++) {
+      const canDown = path.length < 4;
+      const canUp = path.length > 0;
+      if (!canDown && !canUp) { valid = false; break; }
+
+      let doUp;
+      if (!canDown) doUp = true;
+      else if (!canUp) doUp = false;
+      else doUp = Math.random() < 0.4;
+
+      if (doUp) {
+        path.pop();
+        moves.push({ type: 'up' });
+      } else {
+        let folder, tries = 0;
+        do { folder = pick(FOLDER_NAMES); tries++; } while (path.includes(folder) && tries < 50);
+        path.push(folder);
+        moves.push({ type: 'down', folder });
+      }
+    }
+
+    if (!valid || path.length === 0) continue;
+
+    const startPath = 'C:\\' + startFolders.join('\\');
+    const correctPath = 'C:\\' + path.join('\\');
+
+    let sentence = `Вы начали работу в папке ${startPath}. `;
+    moves.forEach(m => {
+      if (m.type === 'up') sentence += 'Затем поднялись на один уровень вверх. ';
+      else sentence += `Затем спустились в папку «${m.folder}». `;
+    });
+    sentence += 'Где вы оказались?';
+
+    // Дистракторы
+    const dists = new Set();
+    const addDist = (p) => { if (p !== correctPath) dists.add(p); };
+
+    // d1: другой последний элемент
+    if (path.length >= 1) {
+      let alt, tries = 0;
+      do { alt = pick(FOLDER_NAMES); tries++; } while (path.includes(alt) && tries < 50);
+      addDist('C:\\' + [...path.slice(0, -1), alt].join('\\'));
+    }
+    // d2: родительская папка
+    if (path.length >= 2) {
+      addDist('C:\\' + path.slice(0, -1).join('\\'));
+    }
+    // d3: с ещё одной папкой в конце
+    if (path.length < 4) {
+      let extra, tries = 0;
+      do { extra = pick(FOLDER_NAMES); tries++; } while (path.includes(extra) && tries < 50);
+      addDist('C:\\' + [...path, extra].join('\\'));
+    }
+    // d4: стартовый путь
+    addDist(startPath);
+    // d5: корень
+    addDist('C:\\');
+
+    // Добить до 3 дистракторов
+    while (dists.size < 3) {
+      const len = randInt(1, 3);
+      const parts = [];
+      for (let i = 0; i < len; i++) {
+        let f, tries = 0;
+        do { f = pick(FOLDER_NAMES); tries++; } while (parts.includes(f) && tries < 50);
+        parts.push(f);
+      }
+      addDist('C:\\' + parts.join('\\'));
+    }
+
+    const opts = [correctPath, ...Array.from(dists).slice(0, 3)];
+
+    return {
+      type: 'choice',
+      instruction: sentence,
+      options: opts,
+      correct: correctPath,
+      explain: `Итоговый путь: ${correctPath}`
+    };
+  }
+
+  return {
+    type: 'choice',
+    instruction: 'Вы начали в C:\\Документы. Спустились в папку «Школа». Где вы оказались?',
+    options: ['C:\\Документы\\Школа', 'C:\\Школа', 'C:\\', 'C:\\Документы'],
+    correct: 'C:\\Документы\\Школа',
+    explain: 'Итоговый путь: C:\\Документы\\Школа'
+  };
+}
+
+/* ---------------------- ГЕНЕРАТОР: Сборка пути ---------------------- */
+
+function generateBuildTask() {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const depth = randInt(2, 4);
+    const usedFolders = new Set();
+    const folders = [];
+    for (let i = 0; i < depth; i++) {
+      let f, tries = 0;
+      do { f = pick(FOLDER_NAMES); tries++; } while (usedFolders.has(f) && tries < 50);
+      usedFolders.add(f);
+      folders.push(f);
+    }
+    const file = pick(FILE_NAMES);
+    const target = ['C:', ...folders, file];
+
+    // Описание
+    let description = `Соберите полный путь к файлу ${file}. Файл лежит в папке «${folders[depth - 1]}»`;
+    for (let i = depth - 2; i >= 0; i--) {
+      description += `, которая вложена в папку «${folders[i]}»`;
+    }
+    description += ' на диске C.';
+
+    // Неправильные карточки
+    const wrongFolders = [];
+    for (let i = 0; i < 2; i++) {
+      let f, tries = 0;
+      do { f = pick(FOLDER_NAMES); tries++; } while ((usedFolders.has(f) || wrongFolders.includes(f)) && tries < 50);
+      wrongFolders.push(f);
+    }
+    const wrongFile = pick(FILE_NAMES.filter(f => f !== file));
+
+    const chips = [...target, ...wrongFolders, wrongFile];
+
+    return {
+      type: 'build',
+      instruction: description,
+      hint: 'Нажимайте карточки снизу в нужном порядке. Чтобы убрать деталь из пути — нажмите на неё.',
+      target,
+      chips,
+      explain: 'Полный путь: ' + target.join('\\')
+    };
+  }
+
+  return {
+    type: 'build',
+    instruction: 'Соберите путь к файлу report.docx. Он в папке Отчёты, вложенной в Проекты на диске C.',
+    hint: 'Нажимайте карточки снизу в нужном порядке.',
+    target: ['C:', 'Проекты', 'Отчёты', 'report.docx'],
+    chips: ['C:', 'Проекты', 'Отчёты', 'report.docx', 'Музыка', 'Фото', 'note.txt'],
+    explain: 'Полный путь: C:\\Проекты\\Отчёты\\report.docx'
+  };
+}
+
+/* ---------------------- СТАТИЧЕСКИЕ ЗАДАНИЯ (18) ---------------------- */
+
+const STATIC_QUESTIONS = [
+  /* 6 концептуальных */
   {
     type: 'choice',
     instruction: 'Что обозначает запись C:\\ ?',
@@ -77,67 +292,7 @@ const QUESTIONS = [
     explain: 'Подъём наверх = в пути убирается последняя папка.'
   },
 
-  /* ---------- 7-12: ПЕРЕХОДЫ ВВЕРХ / ВНИЗ ---------- */
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\учёба\\математика спустились на один уровень вниз в папку ГИА. Где вы оказались?',
-    options: ['C:\\учёба\\математика\\ГИА', 'C:\\учёба\\ГИА', 'C:\\ГИА', 'C:\\учёба'],
-    correct: 'C:\\учёба\\математика\\ГИА',
-    explain: 'Спуск вниз = добавить имя дочерней папки в конец пути.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\учёба\\математика\\ГИА поднялись на один уровень вверх. Где вы оказались?',
-    options: ['C:\\учёба\\математика', 'C:\\учёба', 'C:\\', 'C:\\учёба\\математика\\ГИА'],
-    correct: 'C:\\учёба\\математика',
-    explain: 'Подъём наверх = убрать последнюю папку из пути.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\Музыка спустились в папку Хиты. Где вы оказались?',
-    options: ['C:\\Музыка\\Хиты', 'C:\\Хиты', 'C:\\', 'C:\\Музыка'],
-    correct: 'C:\\Музыка\\Хиты',
-    explain: 'Спуск вниз добавляет имя папки в конец пути.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\Музыка\\Хиты\\Ретро поднялись на один уровень вверх. Где вы оказались?',
-    options: ['C:\\Музыка\\Хиты', 'C:\\Музыка', 'C:\\Музыка\\Хиты\\Ретро', 'C:\\'],
-    correct: 'C:\\Музыка\\Хиты',
-    explain: 'Убрали последнюю папку «Ретро» — и оказались в родительской папке.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\Проекты\\2024\\Отчёты поднялись дважды на уровень вверх. Где вы оказались?',
-    options: ['C:\\Проекты', 'C:\\Проекты\\2024', 'C:\\', 'C:\\Проекты\\2024\\Отчёты'],
-    correct: 'C:\\Проекты',
-    explain: 'Первый подъём → C:\\Проекты\\2024, второй → C:\\Проекты.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Из папки C:\\Проекты спустились в папку 2024, затем — в папку Отчёты. Где вы оказались?',
-    options: ['C:\\Проекты\\2024\\Отчёты', 'C:\\Проекты\\Отчёты', 'C:\\Проекты\\2024', 'C:\\Отчёты'],
-    correct: 'C:\\Проекты\\2024\\Отчёты',
-    explain: 'Каждый спуск добавляет имя папки в конец пути.'
-  },
-
-  /* ---------- 13-18: СБОРКА ПУТИ, СОПОСТАВЛЕНИЕ, ОПЕРАЦИИ ---------- */
-  {
-    type: 'build',
-    instruction: 'Соберите полный путь к файлу ДЗ.txt. Файл лежит в папке Школа на диске C, а папка Школа вложена в папку Документы.',
-    hint: 'Нажимайте на карточки снизу в нужном порядке. Чтобы убрать деталь из пути — нажмите на неё.',
-    target: ['C:', 'Документы', 'Школа', 'ДЗ.txt'],
-    chips: ['C:', 'Документы', 'Школа', 'ДЗ.txt', 'Музыка', 'Картинки'],
-    explain: 'Полный путь: C:\\Документы\\Школа\\ДЗ.txt'
-  },
-  {
-    type: 'build',
-    instruction: 'Соберите полный путь к файлу song.mp3. Файл лежит в папке Рок, которая вложена в папку Музыка на диске C.',
-    hint: 'Порядок карточек = порядок вложенности папок от корня до файла.',
-    target: ['C:', 'Музыка', 'Рок', 'song.mp3'],
-    chips: ['C:', 'Музыка', 'Рок', 'song.mp3', 'Документы', 'Видео'],
-    explain: 'Полный путь: C:\\Музыка\\Рок\\song.mp3'
-  },
+  /* Сопоставления и точечные задачи */
   {
     type: 'match',
     instruction: 'Сопоставьте каждый путь и то, что он означает.',
@@ -161,52 +316,11 @@ const QUESTIONS = [
     explain: 'Спуск = добавить папку в конец пути. Подъём = убрать последнюю папку.'
   },
   {
-    type: 'build',
-    instruction: 'Соберите полный путь к файлу report.docx. Он лежит в папке Отчёты, которая вложена в 2024, а 2024 — в Проекты на диске C.',
-    hint: 'Файл — последняя карточка в пути.',
-    target: ['C:', 'Проекты', '2024', 'Отчёты', 'report.docx'],
-    chips: ['C:', 'Проекты', '2024', 'Отчёты', 'report.docx', 'Музыка', 'Фото'],
-    explain: 'Полный путь: C:\\Проекты\\2024\\Отчёты\\report.docx'
-  },
-  {
     type: 'choice',
     instruction: 'Полный путь файла — C:\\Документы\\Работа\\план.txt. В какой папке лежит файл?',
     options: ['Работа', 'Документы', 'C:\\', 'план'],
     correct: 'Работа',
     explain: 'Файл лежит в последней папке перед ним — «Работа».'
-  },
-
-  /* ---------- 19-24: МНОГОШАГОВЫЕ ЗАДАЧИ ---------- */
-  {
-    type: 'choice',
-    instruction: 'Дима начал работу с каталога C:\\Музыка\\Хиты. Сначала спустился на один уровень вниз в каталог Ретро, затем поднялся на один уровень вверх, потом спустился в каталог Лучшие, после чего спустился в каталог Про_цветы и нашёл там файл Белые_розы.mp3. Запишите полный путь к этому файлу.',
-    options: [
-      'C:\\Белые_розы.mp3',
-      'C:\\Музыка\\Хиты\\Ретро\\Про_цветы\\Белые_розы.mp3',
-      'C:\\Музыка\\Хиты\\Лучшие\\Про_цветы\\Белые_розы.mp3',
-      'C:\\Про_цветы\\Белые_розы.mp3'
-    ],
-    correct: 'C:\\Музыка\\Хиты\\Лучшие\\Про_цветы\\Белые_розы.mp3',
-    explain: 'Старт C:\\Музыка\\Хиты → вниз в Ретро → вверх обратно в Хиты → вниз в Лучшие → вниз в Про_цветы.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Маша работала в папке C:\\Документы\\Школа. Она поднялась на уровень вверх, затем спустилась в папку Фото, потом спустилась в папку Лето и нашла там файл beach.jpg. Запишите полный путь к файлу.',
-    options: [
-      'C:\\Документы\\Фото\\Лето\\beach.jpg',
-      'C:\\Документы\\Школа\\Фото\\Лето\\beach.jpg',
-      'C:\\Фото\\Лето\\beach.jpg',
-      'C:\\Документы\\Лето\\beach.jpg'
-    ],
-    correct: 'C:\\Документы\\Фото\\Лето\\beach.jpg',
-    explain: 'Старт C:\\Документы\\Школа → вверх в Документы → вниз в Фото → вниз в Лето.'
-  },
-  {
-    type: 'choice',
-    instruction: 'Петя начал работу в папке C:\\Игры. Он спустился в папку Стратегии, поднялся на один уровень вверх, затем спустился в папку Аркады. Где он оказался?',
-    options: ['C:\\Игры\\Аркады', 'C:\\Аркады', 'C:\\Игры\\Стратегии\\Аркады', 'C:\\Стратегии'],
-    correct: 'C:\\Игры\\Аркады',
-    explain: 'Старт C:\\Игры → вниз в Стратегии (C:\\Игры\\Стратегии) → вверх (C:\\Игры) → вниз в Аркады.'
   },
   {
     type: 'choice',
@@ -249,8 +363,6 @@ const QUESTIONS = [
     correct: 'C:\\Мои_фото\\Отпуск\\photo.jpg',
     explain: 'Сначала корень, затем все вложенные папки по порядку, в конце — файл.'
   },
-
-  /* ---------- 25-30: РАБОТА С ДЕРЕВОМ КАТАЛОГОВ ---------- */
   {
     type: 'choice',
     instruction: 'Рассмотрите дерево каталогов. В какой папке лежит файл план.txt?',
@@ -330,41 +442,14 @@ const QUESTIONS = [
   }
 ];
 
-/* ---------------------- КРИПТОСТОЙКИЙ RANDOM ---------------------- */
+/* ---------------------- СБОРКА ИТОГОВОГО СПИСКА (44 задания) ---------------------- */
 
-function cryptoRandomInt(max) {
-  if (window.crypto && window.crypto.getRandomValues) {
-    const arr = new Uint32Array(1);
-    window.crypto.getRandomValues(arr);
-    return arr[0] % max;
-  }
-  return Math.floor(Math.random() * max);
-}
-
-/* ---------------------- ПЕРЕМЕШИВАНИЕ (Fisher-Yates + крипто) ---------------------- */
-
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = cryptoRandomInt(i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-/**
- * Перемешивает options и ГАРАНТИРУЕТ, что правильный ответ НЕ на первом месте.
- * Это сознательное небольшое смещение, чтобы полностью исключить ситуацию
- * "правильный ответ всегда первый".
- */
-function shuffleOptionsGuaranteed(options, correctValue) {
-  let a = shuffle(options);
-  if (a.length > 1 && a[0] === correctValue) {
-    const j = 1 + cryptoRandomInt(a.length - 1);
-    [a[0], a[j]] = [a[j], a[0]];
-  }
-  return a;
-}
+const QUESTIONS = [
+  ...STATIC_QUESTIONS.slice(0, 6),
+  ...Array.from({ length: 15 }, () => generateNavigationTask()),
+  ...Array.from({ length: 11 }, () => generateBuildTask()),
+  ...STATIC_QUESTIONS.slice(6)
+];
 
 /* ---------------------- СОСТОЯНИЕ ---------------------- */
 
@@ -458,7 +543,6 @@ function renderQuestion() {
 function renderChoice(q) {
   const wrap = document.createElement('div');
   wrap.className = 'options';
-  // ГАРАНТИРОВАННО перемешиваем: правильный ответ НЕ будет первым
   const opts = shuffleOptionsGuaranteed(q.options, q.correct);
   opts.forEach((opt) => {
     const btn = document.createElement('button');
@@ -568,7 +652,6 @@ function renderMatch(q) {
   const rightOptions = shuffle(q.pairs.map((p) => p.right));
   const pairs = shuffle(q.pairs);
 
-  // Гарантируем, что первая левая пара НЕ соответствует первой правой опции
   if (pairs.length > 1 && rightOptions[0] === pairs[0].right) {
     const j = 1 + cryptoRandomInt(rightOptions.length - 1);
     [rightOptions[0], rightOptions[j]] = [rightOptions[j], rightOptions[0]];
@@ -738,6 +821,16 @@ function showResult() {
 /* ---------------------- СТАРТ / СОБЫТИЯ ---------------------- */
 
 function startOver() {
+  // Перегенерировать задания при повторе
+  const newQuestions = [
+    ...STATIC_QUESTIONS.slice(0, 6),
+    ...Array.from({ length: 15 }, () => generateNavigationTask()),
+    ...Array.from({ length: 11 }, () => generateBuildTask()),
+    ...STATIC_QUESTIONS.slice(6)
+  ];
+  QUESTIONS.length = 0;
+  newQuestions.forEach(q => QUESTIONS.push(q));
+
   state.qIndex = 0;
   state.correct = 0;
   state.answered = false;
