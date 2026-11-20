@@ -126,8 +126,6 @@ function getRowValue(row, col) {
 }
 
 /* ---------- Вычисление значений строки ---------- */
-/* ВАЖНО: getEndTime теперь вычисляет «как в Excel» — рекурсивно по данным. 
-   Никаких занулений из-за пустого H. */
 function computeRowValues(row) {
   let dep1 = null, dep2 = null;
   if (state.isSplit) {
@@ -576,10 +574,36 @@ function setupFormulaStep() {
     }
   }
 
-  // Живая проверка для шагов с формулами (2-5, 7-10)
   if ((step >= 2 && step <= 5) || (step >= 7 && step <= 10)) {
     el.userFormulaInput.oninput = () => handleLiveFormula(step);
   }
+}
+
+/* ---------- Нормализация формул ---------- */
+function normalizeFormula(f) {
+  if (!f) return '';
+  // Убираем пробелы, заменяем запятые на точки с запятой, переводим в верхний регистр
+  let s = String(f).replace(/\s+/g, '').replace(/,/g, ';').toUpperCase();
+  
+  // Умная замена кириллицы на латиницу в ссылках на ячейки (C2, $A, $H и т.д.)
+  s = s.replace(/([А-Я])(\$?)([0-9]+)/g, (match, p1, p2, p3) => {
+     const map = { 'С': 'C', 'А': 'A', 'Н': 'H', 'В': 'B', 'Е': 'E', 'Р': 'P', 'О': 'O', 'М': 'M', 'Т': 'T', 'Х': 'X' };
+     const letter = map[p1] || p1;
+     return letter + p2 + p3;
+  });
+  
+  // Замена кириллицы в диапазонах ($A:$H)
+  s = s.replace(/\$([А-Я]):\$([А-Я])/g, (match, p1, p2) => {
+     const map = { 'С': 'C', 'А': 'A', 'Н': 'H', 'В': 'B', 'Е': 'E', 'Р': 'P', 'О': 'O', 'М': 'M', 'Т': 'T', 'Х': 'X' };
+     const l1 = map[p1] || p1;
+     const l2 = map[p2] || p2;
+     return '$' + l1 + ':$' + l2;
+  });
+
+  // Замена буквы О на ноль в конце (вместо ;0)
+  s = s.replace(/;О\)/g, ';0)').replace(/;O\)/g, ';0)');
+
+  return s;
 }
 
 /* ---------- Живая проверка формул ---------- */
@@ -611,7 +635,6 @@ function handleLiveFormula(step) {
     el.checkBtn.hidden = true;
     el.nextBtn.hidden = false;
   } else {
-    // Откатываем, если ранее что-то было установлено
     if (step === 2) state.calculatedCols.E = false;
     if (step === 3) state.calculatedCols.F = false;
     if (step === 4) state.calculatedCols.H = false;
@@ -629,10 +652,6 @@ function handleLiveFormula(step) {
 }
 
 /* ---------- Проверка ответов ---------- */
-function normalizeFormula(f) {
-  return String(f).replace(/\s/g, '').replace(/,/g, ';').toUpperCase();
-}
-
 function getWrongHint(step) {
   const hints = {
     2: 'Проверьте: что ищем — C2; диапазон $A:$H; номер столбца — 8; обёртка ЕСЛИОШИБКА с нулём.',
@@ -689,14 +708,21 @@ el.checkBtn.addEventListener('click', () => {
     return;
   }
 
-  // Шаги с формулами: если поле disabled — уже правильно, ничего не делаем
+  // Шаги с формулами
   if ((step >= 2 && step <= 5) || (step >= 7 && step <= 10)) {
     if (el.userFormulaInput.disabled) return;
+    
+    // На всякий случай вызываем проверку (если вставили текст и oninput не сработал)
+    handleLiveFormula(step);
+    if (el.userFormulaInput.disabled) return; // Если формула стала верной, выходим
+
     if (!el.userFormulaInput.value.trim()) {
       setFeedback('warn', 'Введите формулу.');
       return;
     }
-    setFeedback('error', `❌ Формула пока не подходит. ${getWrongHint(step)}`);
+    
+    // Если неверно, показываем ошибку и подсказку
+    setFeedback('error', `❌ Формула пока не подходит. ${getWrongHint(step)} <br><small>Убедитесь, что в ссылках на ячейки (C2, A, H) используются латинские буквы, а не русские.</small>`);
     return;
   }
 
