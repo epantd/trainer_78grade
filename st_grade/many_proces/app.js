@@ -27,17 +27,14 @@ const PRACTICE_DATA = [
 ];
 
 const state = {
-  currentStep: 1, // 1: Split, 2: E, 3: F, 4: H, 5: G, 6: Mini, 7-10: Practice, 11-12: Sort, 13-16: Filter
+  currentStep: 1,
   tableData: [], 
   selectedCol: null,
   wizardStep: 1,
-  isDelimited: true,
-  isSemicolon: false,
   isSplit: false,
   calculatedCols: { E: false, F: false, G: false, H: false },
   correctAnswers: 0,
   totalSteps: 16,
-  // Сортировка и фильтр
   sortCol: null,
   sortDir: 'asc',
   filterActive: false,
@@ -77,14 +74,11 @@ const el = {
   statusBarText: document.getElementById('statusBarText')
 };
 
-/* ---------- Инициализация ---------- */
 function resetTrainer() {
   state.currentStep = 1;
   state.tableData = JSON.parse(JSON.stringify(INITIAL_DATA));
   state.selectedCol = null;
   state.wizardStep = 1;
-  state.isDelimited = true;
-  state.isSemicolon = false;
   state.isSplit = false;
   state.calculatedCols = { E: false, F: false, G: false, H: false };
   state.correctAnswers = 0;
@@ -116,7 +110,9 @@ function resetTrainer() {
   closeWizard();
 }
 
-/* ---------- Вычисление значений строки ---------- */
+/* ---------- КЛЮЧЕВАЯ ФУНКЦИЯ: вычисление значений строки ---------- */
+/* ВАЖНО: getEndTime возвращает 0, если H ещё не заполнен!
+   Именно поэтому при первом применении ВПР везде нули — H пуст. */
 function computeRowValues(row) {
   let dep1 = null, dep2 = null;
   if (state.isSplit) {
@@ -129,39 +125,38 @@ function computeRowValues(row) {
 
   const getEndTime = (id) => {
     if (!id) return 0;
+    if (!state.calculatedCols.H) return 0; // H пуст — ВПР не может найти
     const p = state.tableData.find(r => r.id === id);
     if (!p) return 0;
-    let start = 1;
     const pDep1 = parseInt(p.deps.split(';')[0]) || 0;
     const pDep2 = parseInt(p.deps.split(';')[1]) || 0;
     const e1 = getEndTime(pDep1);
     const e2 = getEndTime(pDep2);
-    start = Math.max(e1, e2) + 1;
+    const start = Math.max(e1, e2) + 1;
     return start + p.time - 1;
   };
 
-  const e = state.calculatedCols.E ? getEndTime(dep1) : null;
-  const f = state.calculatedCols.F ? getEndTime(dep2) : null;
+  // E и F показывают 0, если H не заполнен (ВПР возвращает ошибку → 0)
+  const e = state.calculatedCols.E ? (state.calculatedCols.H ? getEndTime(dep1) : 0) : null;
+  const f = state.calculatedCols.F ? (state.calculatedCols.H ? getEndTime(dep2) : 0) : null;
   
   let h = null, g = null;
   if (state.calculatedCols.H) {
     h = row.time + Math.max(e || 0, f || 0);
   }
-  if (state.calculatedCols.G) {
-    g = (h !== null ? h : 0) - row.time + 1;
+  if (state.calculatedCols.G && h !== null) {
+    g = h - row.time + 1;
   }
   return { e, f, g, h };
 }
 
-/* ---------- Рендер таблицы с учётом сортировки и фильтра ---------- */
+/* ---------- Рендер таблицы ---------- */
 function renderTable() {
-  // 1. Вычисляем значения для всех строк
   let rows = state.tableData.map((row, idx) => {
     const vals = computeRowValues(row);
     return { ...row, ...vals, originalIndex: idx };
   });
 
-  // 2. Применяем фильтр
   if (state.filterActive && state.filterCol && state.filterOp && state.filterVal !== null) {
     rows = rows.filter(r => {
       const val = r[state.filterCol.toLowerCase()];
@@ -179,7 +174,6 @@ function renderTable() {
     });
   }
 
-  // 3. Применяем сортировку
   if (state.sortCol) {
     const col = state.sortCol.toLowerCase();
     rows.sort((a, b) => {
@@ -192,7 +186,6 @@ function renderTable() {
     });
   }
 
-  // 4. Отрисовка
   const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   let html = '<thead><tr><th></th>';
   
@@ -204,7 +197,6 @@ function renderTable() {
   });
   html += '</tr></thead><tbody>';
 
-  // Заголовки столбцов
   html += '<tr><td style="background:#f0f0f0; font-weight:bold;">1</td>';
   html += `<td>ID (B)</td>`;
   html += `<td>Время (B)</td>`;
@@ -216,7 +208,6 @@ function renderTable() {
   html += `<td>Конец B</td>`;
   html += '</tr>';
 
-  // Данные
   rows.forEach((row, idx) => {
     html += `<tr><td style="background:#f0f0f0; font-weight:bold;">${idx + 2}</td>`;
     html += `<td>${row.id}</td>`;
@@ -238,7 +229,6 @@ function renderTable() {
     html += '</tr>';
   });
 
-  // Пустые строки для визуала
   for (let i = rows.length + 2; i <= 15; i++) {
     html += `<tr><td style="background:#f0f0f0; font-weight:bold;">${i}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   }
@@ -246,7 +236,6 @@ function renderTable() {
   html += '</tbody>';
   el.calcTable.innerHTML = html;
 
-  // Обновляем статус-бар
   if (state.filterActive) {
     el.statusBarText.textContent = `Показано ${rows.length} из ${state.tableData.length} строк (фильтр)`;
     el.filterStatus.textContent = `Найдено: ${rows.length}`;
@@ -255,7 +244,6 @@ function renderTable() {
     el.filterStatus.textContent = '';
   }
 
-  // Обработчики кликов по заголовкам
   el.calcTable.querySelectorAll('th').forEach(th => {
     if (th.dataset.col) {
       th.addEventListener('click', () => {
@@ -265,7 +253,6 @@ function renderTable() {
           el.cellRef.textContent = col + '1';
           renderTable();
         } else if (state.currentStep >= 11) {
-          // Сортировка по клику
           if (['B', 'E', 'F', 'G', 'H'].includes(col)) {
             if (state.sortCol === col) {
               state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
@@ -281,20 +268,20 @@ function renderTable() {
   });
 }
 
-/* ---------- Обновление инструкций ---------- */
+/* ---------- Инструкции ---------- */
 function updateInstruction() {
   const instructions = {
     1: "Шаг 1. Выделите столбец C и разделите его через меню «Данные → Текст по столбцам» с разделителем «;».",
-    2: "Шаг 2. Заполняем столбец E (Окончание первой зависимости). Введите формулу для E2.",
-    3: "Шаг 3. Заполняем столбец F (Окончание второй зависимости). Введите формулу для F2.",
-    4: "Шаг 4. Теперь найдем время окончания самого процесса (столбец H). Введите формулу для H2.",
-    5: "Шаг 5. Найдем время начала процесса (столбец G). Введите формулу для G2.",
+    2: "Шаг 2. Заполняем столбец E — время окончания первой зависимости. Введите формулу для ячейки E2.",
+    3: "Шаг 3. Заполняем столбец F — время окончания второй зависимости. Введите формулу для ячейки F2.",
+    4: "Шаг 4. Заполняем столбец H — время окончания самого процесса. Введите формулу для H2.",
+    5: "Шаг 5. Заполняем столбец G — время начала процесса. Введите формулу для G2.",
     6: "Шаг 6. Мини-пример. Процесс A длится 3 мс, независим. Процесс B длится 2 мс и зависит от A. На какой миллисекунде начнется процесс B?",
     7: "Шаг 7. Практика. Перед вами новая таблица. Введите формулу для ячейки H4.",
     8: "Шаг 8. Практика. Введите формулу для ячейки G4.",
     9: "Шаг 9. Практика. Введите формулу для ячейки H7.",
     10: "Шаг 10. Практика. Введите формулу для ячейки G7.",
-    11: "Шаг 11. Таблица заполнена. Кликните по заголовку H (Конец B), чтобы отсортировать по возрастанию. Найдите минимальное время завершения и введите его.",
+    11: "Шаг 11. Таблица заполнена. Кликните по заголовку H, чтобы отсортировать по возрастанию. Найдите минимальное время завершения и введите его.",
     12: "Шаг 12. Кликните по заголовку H ещё раз, чтобы отсортировать по убыванию. Найдите максимальное время завершения и введите его.",
     13: "Шаг 13. Используйте панель фильтра: выберите H, условие ≤, введите 17. Нажмите «Применить». Сколько процессов осталось?",
     14: "Шаг 14. Отфильтруйте процессы, у которых начало (G) > 10. Сколько их?",
@@ -303,7 +290,6 @@ function updateInstruction() {
   };
   el.instruction.textContent = instructions[state.currentStep] || "";
   
-  // Управление видимостью элементов
   if (state.currentStep === 1) {
     el.formulaInputArea.hidden = true;
     el.theoryBox.hidden = true;
@@ -330,6 +316,7 @@ function updateProgress() {
   el.progressText.textContent = `Шаг ${state.currentStep} из ${state.totalSteps}`;
 }
 
+/* ---------- ПОДРОБНЫЕ ОБЪЯСНЕНИЯ ПО ШАГАМ ---------- */
 function setupFormulaStep() {
   const step = state.currentStep;
   el.userFormulaInput.value = '';
@@ -339,46 +326,87 @@ function setupFormulaStep() {
 
   if (step === 2) {
     el.formulaLabel.textContent = 'Введите формулу для ячейки E2:';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Используйте <code>ВПР</code> (ищет ID из C2 в диапазоне A:H, возвращает 8-й столбец). Оберните в <code>ЕСЛИОШИБКА</code>, чтобы получить 0, если зависимость = 0.';
+    el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=ЕСЛИОШИБКА(ВПР(<b>C2</b>;$A:$H;<b>8</b>;0);0)</code>';
     el.theoryBox.innerHTML = `
-      <p><b>Как найти время окончания зависимости?</b></p>
-      <p>У нас есть ID процесса в ячейке C2. Нам нужно найти его в основной таблице (столбец A) и взять время из столбца H (Конец B).</p>
-      <p>Для этого используется функция <code>ВПР(искомое; таблица; номер_столбца; 0)</code>.</p>
-      <p>Если в C2 стоит 0 (нет зависимости), ВПР выдаст ошибку. Чтобы этого избежать, используем <code>ЕСЛИОШИБКА(формула; 0)</code>.</p>
+      <p><b>📌 Столбец E: время окончания первой зависимости</b></p>
+      <p>Нам нужно узнать: <i>на какой миллисекунде закончился процесс из ячейки C2?</i></p>
+      <p>Для этого используем функцию <b>ВПР</b> (вертикальный поиск). Её синтаксис:</p>
+      <p style="text-align:center;background:#fff;padding:8px;border-radius:6px;font-family:monospace;">=ВПР(что_ищем; где_ищем; номер_столбца; 0)</p>
+      <p>Разбираем нашу формулу по аргументам:</p>
+      <ul>
+        <li><b>1. Что ищем → <code>C2</code></b>. Это ID первой зависимости (например, число 1).</li>
+        <li><b>2. Где ищем → <code>$A:$H</code></b>. Ищем по всей таблице. Знаки <code>$</code> фиксируют диапазон, чтобы при протягивании формулы вниз он не смещался.</li>
+        <li><b>3. Какой столбец вернуть → <code>8</code></b>. Считаем от A: A=1, B=2, C=3, D=4, E=5, F=6, G=7, <b>H=8</b>. То есть возвращаем значение из H (Конец B).</li>
+        <li><b>4. Точное совпадение → <code>0</code></b>. Ищем именно этот ID, никаких "примерных" совпадений.</li>
+      </ul>
+      <p><b>Зачем ЕСЛИОШИБКА?</b> Если в C2 стоит 0 (нет зависимости), ВПР будет искать 0 в столбце A и не найдёт — выдаст ошибку <code>#Н/Д</code>. Обёртка <code>ЕСЛИОШИБКА(ВПР(...); 0)</code> ловит эту ошибку и возвращает 0.</p>
+      <div class="warn-block">
+        ⚠️ <b>Важно:</b> сейчас столбец H ещё ПУСТ. Поэтому ВПР для всех строк вернёт ошибку → 0. Так и должно быть! Вы увидите, что весь столбец E заполнится нулями. Это нормально — когда позже мы заполним H, значения пересчитаются автоматически.
+      </div>
     `;
   } else if (step === 3) {
     el.formulaLabel.textContent = 'Введите формулу для ячейки F2:';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Формула аналогична, но ищет она ID из ячейки <b>D2</b>.';
+    el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=ЕСЛИОШИБКА(ВПР(<b>D2</b>;$A:$H;<b>8</b>;0);0)</code>';
     el.theoryBox.innerHTML = `
-      <p>Поскольку у процесса может быть до двух зависимостей, во втором столбце F мы ищем окончание для второй из них.</p>
-      <p>Скопируйте логику из E2, но обратите внимание на то, какой столбец вы проверяете.</p>
+      <p><b>📌 Столбец F: время окончания второй зависимости</b></p>
+      <p>Формула полностью аналогична E2, но есть <b>одно отличие</b>: искать нужно не в C2, а в <b>D2</b> — там записан ID второй зависимости (если она есть).</p>
+      <ul>
+        <li><b>Что ищем → <code>D2</code></b> (вторая зависимость).</li>
+        <li><b>Где ищем → <code>$A:$H</code></b> (та же таблица, диапазон не меняется).</li>
+        <li><b>Номер столбца → <code>8</code></b> (столбец H — время окончания).</li>
+        <li><b>Точное совпадение → <code>0</code></b>.</li>
+      </ul>
+      <p>Если у процесса только одна зависимость (или нет совсем), ячейка D2 будет пустой или содержать 0. ВПР не найдёт такое значение → ошибка → ЕСЛИОШИБКА вернёт 0. Всё правильно!</p>
+      <div class="warn-block">
+        ⚠️ Столбец H по-прежнему пуст. Поэтому и в F2 мы увидим нули. Так и должно быть — пока не заполним H, ВПР нечего искать.
+      </div>
     `;
   } else if (step === 4) {
     el.formulaLabel.textContent = 'Введите формулу для ячейки H2:';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Время окончания = Длительность (B2) + <code>МАКС(E2:F2)</code>.';
+    el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>B2</b>+<b>МАКС(E2:F2)</b></code>';
     el.theoryBox.innerHTML = `
-      <p><b>Правило:</b> Конец = Длительность + Самое позднее окончание зависимостей.</p>
-      <p>Если у процесса нет зависимостей, их окончания равны 0. Тогда конец просто равен длительности.</p>
-      <p>Если зависимости есть, мы берем <code>МАКС(E2:F2)</code> и прибавляем длительность.</p>
+      <p><b>📌 Столбец H: время окончания процесса</b></p>
+      <p>Логика простая: процесс не может закончиться, пока не закончатся <b>все</b> его зависимости. Плюс он ещё сам работает B2 миллисекунд.</p>
+      <p style="text-align:center;background:#fff;padding:8px;border-radius:6px;font-family:monospace;">=B2 + МАКС(E2:F2)</p>
+      <p>Что здесь что:</p>
+      <ul>
+        <li><b>B2</b> — длительность самого процесса (сколько миллисекунд он работает).</li>
+        <li><b>МАКС(E2:F2)</b> — самое позднее из времён окончания зависимостей. Если обе зависимости закончились в разное время, наш процесс начнётся после <i>более поздней</i>.</li>
+        <li><b>Если зависимостей нет</b> (E2=F2=0), то МАКС = 0, и H = B2 (процесс начнётся с 1-й мс и закончится на B2-й).</li>
+      </ul>
+      <p><b>Пример:</b> процесс длится 2 мс, зависит от процесса, который закончился на 3-й мс. Тогда H = 2 + 3 = 5. Процесс занимает миллисекунды с 4-й по 5-ю.</p>
+      <div class="warn-block">
+        ⚠️ <b>Что произойдёт после ввода формулы:</b> сейчас E и F равны 0 (потому что H был пуст). Но как только H получит значения, Excel <b>пересчитает E и F</b> — они ссылаются на H. Смотрите: весь столбец заполнится реальными числами, включая правильные E, F, H. Это и есть имитация поведения Excel.
+      </div>
     `;
   } else if (step === 5) {
     el.formulaLabel.textContent = 'Введите формулу для ячейки G2:';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Начало = Конец (H2) - Длительность (B2) + 1.';
+    el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>H2</b>-<b>B2</b>+<b>1</b></code>';
     el.theoryBox.innerHTML = `
-      <p><b>Правило отрезка:</b> Длительность = Конец − Начало + 1.</p>
-      <p>Отсюда выражаем Начало: <code>Начало = Конец - Длительность + 1</code>.</p>
-      <p>Нам уже известен Конец (H2) и Длительность (B2).</p>
+      <p><b>📌 Столбец G: время начала процесса</b></p>
+      <p><b>Откуда берётся +1?</b> Вспомним формулу длины отрезка на числовой прямой:</p>
+      <p style="text-align:center;background:#fff;padding:8px;border-radius:6px;font-family:monospace;">Длительность = Конец − Начало + 1</p>
+      <p><b>Проверим на примере:</b> процесс занимает миллисекунды 3, 4, 5. Длительность = 3, начало = 3, конец = 5. Подставляем: 5 − 3 + 1 = 3 ✓</p>
+      <p>Теперь выразим <b>Начало</b> из этой формулы:</p>
+      <p style="text-align:center;background:#fff;padding:8px;border-radius:6px;font-family:monospace;">Начало = Конец − Длительность + 1</p>
+      <p>В наших обозначениях: <b>G = H − B + 1</b>.</p>
+      <ul>
+        <li><b>H2</b> — время окончания процесса (мы его только что посчитали).</li>
+        <li><b>B2</b> — длительность процесса.</li>
+        <li><b>+1</b> — потому что отсчёт начинается с 1-й мс, а не с 0-й.</li>
+      </ul>
+      <p><b>Пример:</b> процесс закончился на 5-й мс, длится 2 мс. Начало = 5 − 2 + 1 = 4. Процесс занимает 4-ю и 5-ю мс. ✓</p>
     `;
   } else if (step === 6) {
     el.formulaLabel.textContent = 'Введите ответ (номер миллисекунды):';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Процесс A занимает 1, 2 и 3. Процесс B не может начаться на 3-й, значит он начинается на следующей.';
+    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Процесс A занимает 1, 2, 3. Процесс B не может начаться на 3-й, потому что A ещё не закончил.';
     el.theoryBox.innerHTML = `
-      <p><b>Проверим логику на примере.</b></p>
-      <p>Процесс A длится 3 мс и ни от кого не зависит. Он занимает 1-ю, 2-ю и 3-ю миллисекунды.</p>
-      <p>Процесс B длится 2 мс и зависит от A. Он не может начаться на 3-й мс, потому что A еще работает. Значит, B начнется на 4-й мс.</p>
+      <p><b>Проверим логику на мини-примере.</b></p>
+      <p>• Процесс <b>A</b> длится 3 мс и ни от кого не зависит. Он занимает 1-ю, 2-ю и 3-ю миллисекунды (начало = 1, конец = 3).</p>
+      <p>• Процесс <b>B</b> длится 2 мс и зависит от A. Он не может начаться на 3-й мс, потому что A ещё работает в этот момент. Значит, B начнётся на <b>4-й</b> мс.</p>
+      <p>Проверим через формулу: H_A = 3 (процесс A закончился на 3-й мс). Тогда для B: E = H_A = 3, и начало B = конец A + 1 = 4. ✓</p>
     `;
   } else if (step >= 7 && step <= 10) {
-    // Переключаем данные на практические
     if (state.tableData[0].id !== PRACTICE_DATA[0].id) {
       state.tableData = JSON.parse(JSON.stringify(PRACTICE_DATA));
       state.isSplit = true; 
@@ -388,23 +416,22 @@ function setupFormulaStep() {
 
     if (step === 7) {
       el.formulaLabel.textContent = 'Введите формулу для ячейки H4 (Процесс 3):';
-      el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Длительность (B4) + МАКС окончаний зависимостей (E4:F4).';
-      el.theoryBox.innerHTML = `<p>Практика. Примените формулу для конца процесса к новой строке.</p>`;
+      el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>B4</b>+<b>МАКС(E4:F4)</b></code>';
+      el.theoryBox.innerHTML = `<p><b>Практика.</b> Примените ту же формулу, что и для H2, но для строки 4. Обратите внимание, что номер строки в ссылках теперь 4, а не 2.</p>`;
     } else if (step === 8) {
       el.formulaLabel.textContent = 'Введите формулу для ячейки G4 (Процесс 3):';
-      el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Конец (H4) - Длительность (B4) + 1.';
-      el.theoryBox.innerHTML = `<p>Практика. Примените формулу для начала процесса к новой строке.</p>`;
+      el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>H4</b>-<b>B4</b>+<b>1</b></code>';
+      el.theoryBox.innerHTML = `<p><b>Практика.</b> Формула начала процесса — та же, что для G2, но строка 4.</p>`;
     } else if (step === 9) {
       el.formulaLabel.textContent = 'Введите формулу для ячейки H7 (Процесс 6):';
-      el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Длительность (B7) + МАКС окончаний зависимостей (E7:F7).';
-      el.theoryBox.innerHTML = `<p>Практика. Обратите внимание на номер строки.</p>`;
+      el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>B7</b>+<b>МАКС(E7:F7)</b></code>';
+      el.theoryBox.innerHTML = `<p><b>Практика.</b> Строка 7 — процесс 6. Формула такая же, но с новыми номерами.</p>`;
     } else if (step === 10) {
       el.formulaLabel.textContent = 'Введите формулу для ячейки G7 (Процесс 6):';
-      el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Конец (H7) - Длительность (B7) + 1.';
-      el.theoryBox.innerHTML = `<p>Практика. Последний шаг!</p>`;
+      el.formulaHint.innerHTML = '💡 <b>Шаблон:</b> <code>=<b>H7</b>-<b>B7</b>+<b>1</b></code>';
+      el.theoryBox.innerHTML = `<p><b>Практика.</b> Последний шаг формул!</p>`;
     }
   } else if (step === 11) {
-    // Подготовка данных для сортировки
     if (state.tableData[0].id !== INITIAL_DATA[0].id) {
       state.tableData = JSON.parse(JSON.stringify(INITIAL_DATA));
       state.isSplit = true;
@@ -415,11 +442,11 @@ function setupFormulaStep() {
       renderTable();
     }
     el.formulaLabel.textContent = 'Введите минимальное время завершения (из столбца H):';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Кликните по заголовку H — таблица отсортируется по возрастанию. Первое значение в столбце H и есть минимум.';
-    el.theoryBox.innerHTML = `<p><b>Сортировка.</b> Кликните по заголовку столбца H, чтобы упорядочить строки. При повторном клике направление меняется.</p>`;
+    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Кликните по заголовку H — таблица отсортируется по возрастанию. Первое значение в столбце H — минимум.';
+    el.theoryBox.innerHTML = `<p><b>Сортировка.</b> Клик по заголовку столбца упорядочивает строки по этому столбцу. При повторном клике направление меняется (возрастание / убывание).</p>`;
   } else if (step === 12) {
     el.formulaLabel.textContent = 'Введите максимальное время завершения (из столбца H):';
-    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Кликните по заголовку H ещё раз (или дважды), чтобы отсортировать по убыванию. Первое значение — максимум.';
+    el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Кликните по заголовку H ещё раз, чтобы отсортировать по убыванию. Первое значение — максимум.';
     el.theoryBox.innerHTML = `<p><b>Сортировка по убыванию.</b> Найдите наибольшее значение в столбце H.</p>`;
   } else if (step >= 13 && step <= 16) {
     if (state.tableData[0].id !== INITIAL_DATA[0].id) {
@@ -433,11 +460,11 @@ function setupFormulaStep() {
     if (step === 13) {
       el.formulaLabel.textContent = 'Введите количество процессов, завершившихся за первые 17 мс:';
       el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> В панели фильтра выберите столбец H, условие ≤, значение 17. Нажмите «Применить».';
-      el.theoryBox.innerHTML = `<p><b>Фильтр.</b> Оставьте только те строки, где значение в столбце H меньше или равно 17.</p>`;
+      el.theoryBox.innerHTML = `<p><b>Фильтр.</b> Оставьте только строки, где H ≤ 17. Это значит «процесс закончился не позже 17-й мс».</p>`;
     } else if (step === 14) {
       el.formulaLabel.textContent = 'Введите количество процессов, начавшихся после 10 мс:';
       el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Столбец G, условие >, значение 10.';
-      el.theoryBox.innerHTML = `<p><b>Фильтр по началу.</b> Используйте столбец G (Начало B).</p>`;
+      el.theoryBox.innerHTML = `<p><b>Фильтр по началу.</b> Используйте столбец G (Начало B) и условие «больше».</p>`;
     } else if (step === 15) {
       el.formulaLabel.textContent = 'Введите количество процессов с длительностью более 5 мс:';
       el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Столбец B, условие >, значение 5.';
@@ -445,12 +472,12 @@ function setupFormulaStep() {
     } else if (step === 16) {
       el.formulaLabel.textContent = 'Введите количество процессов, завершившихся не позднее 10 мс:';
       el.formulaHint.innerHTML = '💡 <b>Подсказка:</b> Столбец H, условие ≤, значение 10.';
-      el.theoryBox.innerHTML = `<p><b>Фильтр по окончанию.</b> Используйте столбец H (Конец B).</p>`;
+      el.theoryBox.innerHTML = `<p><b>Фильтр по окончанию.</b> Используйте столбец H и «не больше».</p>`;
     }
   }
 }
 
-/* ---------- Обработка формул и ответов ---------- */
+/* ---------- Проверка ---------- */
 function normalizeFormula(f) {
   return f.replace(/\s/g, '').replace(/,/g, ';').toUpperCase();
 }
@@ -468,7 +495,6 @@ el.checkBtn.addEventListener('click', () => {
     return;
   }
 
-  // Для шагов 11-16 проверяем числовой ответ
   if (state.currentStep >= 11) {
     const val = el.userFormulaInput.value.trim();
     if (val === '') {
@@ -498,7 +524,6 @@ el.checkBtn.addEventListener('click', () => {
     return;
   }
 
-  // Остальные шаги (2-10) — проверка формул
   const userFormula = normalizeFormula(el.userFormulaInput.value);
   let isCorrect = false;
   let correctAnswerText = '';
@@ -561,11 +586,9 @@ el.checkBtn.addEventListener('click', () => {
   }
 });
 
-/* ---------- Переход ---------- */
 el.nextBtn.addEventListener('click', () => {
   if (state.currentStep < state.totalSteps) {
     state.currentStep++;
-    // Сброс сортировки и фильтра при переходе
     state.sortCol = null;
     state.sortDir = 'asc';
     state.filterActive = false;
@@ -583,14 +606,13 @@ el.nextBtn.addEventListener('click', () => {
   }
 });
 
-/* ---------- Финал ---------- */
 function showResult() {
   el.screenQuiz.hidden = true;
   el.screenResult.hidden = false;
   document.getElementById('finishText').innerHTML = `Вы прошли все этапы! Вы научились разделять данные, подтягивать значения зависимостей, вычислять время начала и конца процессов, а также использовать сортировку и фильтр.<br><br>Теперь вы готовы решать задание 22 на любых данных!`;
 }
 
-/* ---------- Меню данных (Шаг 1) ---------- */
+/* ---------- Меню данных ---------- */
 el.menuData.addEventListener('click', (e) => {
   e.stopPropagation();
   if (state.currentStep === 1 && state.selectedCol === 'C') {
@@ -616,7 +638,6 @@ el.btnTextToColumns.addEventListener('click', (e) => {
   }
 });
 
-/* ---------- Мастер (Wizard) ---------- */
 function openWizard() {
   el.wizardModal.hidden = false;
   state.wizardStep = 1;
@@ -630,7 +651,6 @@ function updateWizardUI() {
   document.getElementById('step1').hidden = state.wizardStep !== 1;
   document.getElementById('step2').hidden = state.wizardStep !== 2;
   document.getElementById('step3').hidden = state.wizardStep !== 3;
-  
   document.getElementById('wizardBack').hidden = state.wizardStep === 1;
   document.getElementById('wizardNext').hidden = state.wizardStep === 3;
   document.getElementById('wizardFinish').hidden = state.wizardStep !== 3;
@@ -692,7 +712,6 @@ el.resetFilterBtn.addEventListener('click', () => {
   renderTable();
 });
 
-/* ---------- Вспомогательные ---------- */
 function setFeedback(type, text) {
   el.feedback.textContent = text;
   el.feedback.className = 'feedback ' + (type || '');
