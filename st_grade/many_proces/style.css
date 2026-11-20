@@ -22,9 +22,12 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: ra
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .instruction { margin: 0 0 16px; font-size: 16px; line-height: 1.55; color: #334155; font-weight: 500; }
 
-.theory-box { background: #f8fafc; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 20px; font-size: 14.5px; line-height: 1.6; }
+.theory-box { background: #f8fafc; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 20px; font-size: 14.5px; line-height: 1.65; }
 .theory-box p { margin: 0 0 10px; }
-.theory-box code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--red); }
+.theory-box ul { margin: 6px 0 10px; padding-left: 20px; }
+.theory-box li { margin-bottom: 4px; }
+.theory-box code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--red); font-size: 13px; }
+.theory-box .warn-block { background: #fef3c7; border-left: 3px solid #b45309; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-top: 10px; font-size: 14px; }
 
 .calc-window { border: 1px solid var(--calc-border); border-radius: 4px; background: #f8f9fa; margin-bottom: 20px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
 .calc-menu-bar { display: flex; gap: 12px; padding: 4px 8px; background: #f0f0f0; border-bottom: 1px solid var(--calc-border); font-size: 12px; color: #333; user-select: none; }
