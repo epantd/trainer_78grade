@@ -40,7 +40,8 @@ const state = {
   filterActive: false,
   filterCol: null,
   filterOp: null,
-  filterVal: null
+  filterVal: null,
+  attempts: 0 // счётчик неудачных попыток на текущем шаге
 };
 
 const el = {
@@ -88,6 +89,7 @@ function resetTrainer() {
   state.filterCol = null;
   state.filterOp = null;
   state.filterVal = null;
+  state.attempts = 0;
   
   el.screenQuiz.hidden = false;
   el.screenResult.hidden = true;
@@ -470,6 +472,51 @@ function setupFormulaStep() {
   }
 }
 
+/* ---------- Хелперы для сообщений об ошибках ---------- */
+function getWrongHint(step) {
+  // Возвращает конкретную подсказку (что не так), но НЕ правильный ответ
+  const hints = {
+    2: 'Проверьте: 1) что ищем — C2; 2) диапазон $A:$H; 3) номер столбца — 8; 4) обёртка ЕСЛИОШИБКА с нулём.',
+    3: 'Проверьте: 1) что ищем — D2 (не C2!); 2) диапазон $A:$H; 3) номер столбца — 8; 4) ЕСЛИОШИБКА с нулём.',
+    4: 'Проверьте: 1) длительность в B2; 2) максимум берётся из E2 и F2 через МАКС; 3) знак «плюс» между ними.',
+    5: 'Проверьте: 1) сначала H2 (конец); 2) вычитаем B2 (длительность); 3) не забудьте +1 в конце.',
+    6: 'Процесс A заканчивается на 3-й мс. На какой мс может стартовать B, если он не может начаться, пока A работает?',
+    7: 'Логика та же, что в H2, но строка теперь 4: B4 плюс максимум из E4 и F4.',
+    8: 'Логика та же, что в G2, но строка теперь 4: H4 минус B4, плюс 1.',
+    9: 'Логика та же, что в H2, но строка теперь 7: B7 плюс максимум из E7 и F7.',
+    10: 'Логика та же, что в G2, но строка теперь 7: H7 минус B7, плюс 1.',
+    11: 'Отсортируйте по возрастанию (клик по H) и посмотрите на самое верхнее число в H.',
+    12: 'Отсортируйте по убыванию (клик по H ещё раз) и посмотрите на самое верхнее число в H.',
+    13: 'В панели фильтра: столбец H, условие ≤, значение 17. Затем посмотрите на счётчик «Найдено».',
+    14: 'В панели фильтра: столбец G, условие >, значение 10. Затем посмотрите на счётчик «Найдено».',
+    15: 'В панели фильтра: столбец B, условие >, значение 5. Затем посмотрите на счётчик «Найдено».',
+    16: 'В панели фильтра: столбец H, условие ≤, значение 10. Затем посмотрите на счётчик «Найдено».'
+  };
+  return hints[step] || 'Попробуйте ещё раз, внимательно перечитайте подсказку выше.';
+}
+
+function getFinalAnswer(step) {
+  // Возвращает правильный ответ (используется ТОЛЬКО после 3-х неудачных попыток)
+  const answers = {
+    2: '=ЕСЛИОШИБКА(ВПР(C2;$A:$H;8;0);0)',
+    3: '=ЕСЛИОШИБКА(ВПР(D2;$A:$H;8;0);0)',
+    4: '=B2+МАКС(E2:F2)',
+    5: '=H2-B2+1',
+    6: '4',
+    7: '=B4+МАКС(E4:F4)',
+    8: '=H4-B4+1',
+    9: '=B7+МАКС(E7:F7)',
+    10: '=H7-B7+1',
+    11: '3',
+    12: '17',
+    13: '12',
+    14: '3',
+    15: '6',
+    16: '5'
+  };
+  return answers[step] || '';
+}
+
 /* ---------- Проверка ---------- */
 function normalizeFormula(f) {
   return f.replace(/\s/g, '').replace(/,/g, ';').toUpperCase();
@@ -488,74 +535,50 @@ el.checkBtn.addEventListener('click', () => {
     return;
   }
 
+  // Шаги 11-16 — числовые ответы (счётчики, минимумы, максимумы)
   if (state.currentStep >= 11) {
     const val = el.userFormulaInput.value.trim();
     if (val === '') {
       setFeedback('warn', 'Введите ответ.');
       return;
     }
-    let correct = '';
-    if (state.currentStep === 11) correct = '3';
-    else if (state.currentStep === 12) correct = '17';
-    else if (state.currentStep === 13) correct = '12';
-    else if (state.currentStep === 14) correct = '3';
-    else if (state.currentStep === 15) correct = '6';
-    else if (state.currentStep === 16) correct = '5';
+    const correct = getFinalAnswer(state.currentStep);
 
     if (val === correct) {
       el.userFormulaInput.classList.add('ok');
       el.userFormulaInput.classList.remove('wrong');
       el.userFormulaInput.disabled = true;
       state.correctAnswers++;
+      state.attempts = 0;
       setFeedback('success', '✅ Верно!');
       el.checkBtn.hidden = true;
       el.nextBtn.hidden = false;
     } else {
+      state.attempts++;
       el.userFormulaInput.classList.add('wrong');
-      setFeedback('error', `❌ Неверно. Попробуйте ещё раз или воспользуйтесь подсказкой.`);
+      el.userFormulaInput.classList.remove('ok');
+      if (state.attempts >= 3) {
+        el.userFormulaInput.disabled = true;
+        setFeedback('error', `❌ Снова неверно. После 3 попыток показываем правильный ответ: <b>${correct}</b>. Разберитесь, почему именно так, и нажмите «Далее».`);
+        el.checkBtn.hidden = true;
+        el.nextBtn.hidden = false;
+      } else {
+        setFeedback('error', `❌ Неверно (попытка ${state.attempts} из 3). ${getWrongHint(state.currentStep)}`);
+      }
     }
     return;
   }
 
+  // Шаги 2-10 — проверка формул
   const userFormula = normalizeFormula(el.userFormulaInput.value);
-  let isCorrect = false;
-  let correctAnswerText = '';
-
-  if (state.currentStep === 2) {
-    const correct = normalizeFormula('=ЕСЛИОШИБКА(ВПР(C2;$A:$H;8;0);0)');
-    correctAnswerText = '=ЕСЛИОШИБКА(ВПР(C2;$A:$H;8;0);0)';
-    isCorrect = (userFormula === correct || userFormula === normalizeFormula('=ЕСЛИОШИБКА(ВПР(C2;A:H;8;0);0)'));
-  } else if (state.currentStep === 3) {
-    const correct = normalizeFormula('=ЕСЛИОШИБКА(ВПР(D2;$A:$H;8;0);0)');
-    correctAnswerText = '=ЕСЛИОШИБКА(ВПР(D2;$A:$H;8;0);0)';
-    isCorrect = (userFormula === correct || userFormula === normalizeFormula('=ЕСЛИОШИБКА(ВПР(D2;A:H;8;0);0)'));
-  } else if (state.currentStep === 4) {
-    const correct = normalizeFormula('=B2+МАКС(E2:F2)');
-    correctAnswerText = '=B2+МАКС(E2:F2)';
-    isCorrect = (userFormula === correct);
-  } else if (state.currentStep === 5) {
-    const correct = normalizeFormula('=H2-B2+1');
-    correctAnswerText = '=H2-B2+1';
-    isCorrect = (userFormula === correct);
-  } else if (state.currentStep === 6) {
-    isCorrect = (el.userFormulaInput.value.trim() === '4');
-    correctAnswerText = '4';
-  } else if (state.currentStep === 7) {
-    const correct = normalizeFormula('=B4+МАКС(E4:F4)');
-    correctAnswerText = '=B4+МАКС(E4:F4)';
-    isCorrect = (userFormula === correct);
-  } else if (state.currentStep === 8) {
-    const correct = normalizeFormula('=H4-B4+1');
-    correctAnswerText = '=H4-B4+1';
-    isCorrect = (userFormula === correct);
-  } else if (state.currentStep === 9) {
-    const correct = normalizeFormula('=B7+МАКС(E7:F7)');
-    correctAnswerText = '=B7+МАКС(E7:F7)';
-    isCorrect = (userFormula === correct);
-  } else if (state.currentStep === 10) {
-    const correct = normalizeFormula('=H7-B7+1');
-    correctAnswerText = '=H7-B7+1';
-    isCorrect = (userFormula === correct);
+  const finalAnswer = getFinalAnswer(state.currentStep);
+  const correctNorm = normalizeFormula(finalAnswer);
+  
+  // Дополнительный вариант для ВПР без $ (тоже допустимо)
+  let isCorrect = (userFormula === correctNorm);
+  if (!isCorrect && (state.currentStep === 2 || state.currentStep === 3)) {
+    const altCorrect = normalizeFormula(finalAnswer.replace(/\$/g, ''));
+    isCorrect = (userFormula === altCorrect);
   }
 
   if (isCorrect) {
@@ -563,6 +586,7 @@ el.checkBtn.addEventListener('click', () => {
     el.userFormulaInput.classList.remove('wrong');
     el.userFormulaInput.disabled = true;
     state.correctAnswers++;
+    state.attempts = 0;
     
     if (state.currentStep === 2) state.calculatedCols.E = true;
     if (state.currentStep === 3) state.calculatedCols.F = true;
@@ -574,14 +598,27 @@ el.checkBtn.addEventListener('click', () => {
     el.checkBtn.hidden = true;
     el.nextBtn.hidden = false;
   } else {
+    state.attempts++;
     el.userFormulaInput.classList.add('wrong');
-    setFeedback('error', `❌ Неверно. Правильный ответ: ${correctAnswerText}.`);
+    el.userFormulaInput.classList.remove('ok');
+
+    if (state.attempts >= 3) {
+      // Только после 3-х неудачных попыток раскрываем ответ
+      el.userFormulaInput.disabled = true;
+      setFeedback('error', `❌ Снова неверно. После 3 попыток показываем правильный ответ: <code>${finalAnswer}</code>. Разберитесь, почему именно так, и нажмите «Далее».`);
+      el.checkBtn.hidden = true;
+      el.nextBtn.hidden = false;
+    } else {
+      // Обычная ошибка — только подсказка, БЕЗ ответа
+      setFeedback('error', `❌ Неверно (попытка ${state.attempts} из 3). ${getWrongHint(state.currentStep)}`);
+    }
   }
 });
 
 el.nextBtn.addEventListener('click', () => {
   if (state.currentStep < state.totalSteps) {
     state.currentStep++;
+    state.attempts = 0;
     state.sortCol = null;
     state.sortDir = 'asc';
     state.filterActive = false;
@@ -594,6 +631,8 @@ el.nextBtn.addEventListener('click', () => {
     renderTable();
     el.nextBtn.hidden = true;
     el.checkBtn.hidden = false;
+    el.userFormulaInput.disabled = false;
+    el.userFormulaInput.classList.remove('ok', 'wrong');
   } else {
     showResult();
   }
@@ -706,7 +745,7 @@ el.resetFilterBtn.addEventListener('click', () => {
 });
 
 function setFeedback(type, text) {
-  el.feedback.textContent = text;
+  el.feedback.innerHTML = text;
   el.feedback.className = 'feedback ' + (type || '');
 }
 
