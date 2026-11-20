@@ -90,6 +90,13 @@ const GRADES = [
         emoji: '🌐',
         path: 'st_grade/ten_ip/index.html'
       }
+      {
+        quarter: 'II четверть',
+        title: 'Паралелльные процессы',
+        desc: 'Универсальный алгоритм решения задания №22 с использованием Excel (функция ВПР, диаграмма Ганта и инструмент «Поиск решения»).',
+        emoji: '📊',
+        path: 'st_grade/many_proces/index.html'
+      }
     ]
   }
 ];
