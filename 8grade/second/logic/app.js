@@ -2,7 +2,7 @@
 
 /* ==========================================================
    ТРЕНАЖЁР: Логические высказывания и операции над ними
-   30 заданий, данные генерируются случайно
+   Всего заданий: 8 + 8 + 6 + 14 + 14 + 10 = 60
    ========================================================== */
 
 /* ---------------------- УТИЛИТЫ ---------------------- */
@@ -102,15 +102,26 @@ const WORDS = [
 const VOWELS = 'АЕЁИОУЫЭЮЯаеёиоуыэюя';
 function isVowel(ch) { return VOWELS.includes(ch); }
 
+/* ------------------ СРАВНЕНИЯ ДЛЯ ВЫРАЖЕНИЙ С X ------------------ */
+
+// Противоположный знак сравнения — нужен при «зачёркивании» НЕ
+const OPPOSITE_CMP = {
+  '>':  '<=',
+  '>=': '<',
+  '<':  '>=',
+  '<=': '>',
+  '=':  '!='
+};
+
 /* ==========================================================
-   ГЕНЕРАЦИЯ ЗАДАНИЙ
+   ГЕНЕРАЦИЯ ЗАДАНИЙ (60 штук)
    ========================================================== */
 
 function generateTasks() {
   const tasks = [];
 
-  /* ---------- БЛОК 1: Высказывание или нет (4 задания) ---------- */
-  for (let i = 0; i < 4; i++) {
+  /* ---------- БЛОК 1: Высказывание или нет (8 заданий) ---------- */
+  for (let i = 0; i < 8; i++) {
     const isStatement = Math.random() < 0.5;
     const sentence = isStatement ? pick(STATEMENTS) : pick(NON_STATEMENTS);
     tasks.push({
@@ -124,8 +135,8 @@ function generateTasks() {
     });
   }
 
-  /* ---------- БЛОК 2: Простое или составное (4 задания) ---------- */
-  for (let i = 0; i < 4; i++) {
+  /* ---------- БЛОК 2: Простое или составное (8 заданий) ---------- */
+  for (let i = 0; i < 8; i++) {
     const isCompound = Math.random() < 0.5;
     const sentence = isCompound ? pick(COMPOUND_STATEMENTS) : pick(SIMPLE_STATEMENTS);
     tasks.push({
@@ -139,48 +150,50 @@ function generateTasks() {
     });
   }
 
-  /* ---------- БЛОК 3: Мультивыбор (3 задания) ---------- */
-  // 9: все высказывания
-  {
-    const correctList = pickN([...STATEMENTS, ...SIMPLE_STATEMENTS, ...COMPOUND_STATEMENTS], 3);
-    const wrongList = pickN(NON_STATEMENTS, 3);
-    const all = shuffle([...correctList, ...wrongList]);
-    tasks.push({
-      type: 'multi',
-      instruction: 'Выберите ВСЕ высказывания (то, о чём можно сказать «истинно» или «ложно»).',
-      options: all,
-      correct: correctList,
-      explain: 'Вопросы и побуждения — не высказывания, потому что их нельзя оценить как истинные или ложные.'
-    });
-  }
-  // 10: все простые
-  {
-    const correctList = pickN(SIMPLE_STATEMENTS, 3);
-    const wrongList = pickN([...COMPOUND_STATEMENTS, ...NON_STATEMENTS], 3);
-    const all = shuffle([...correctList, ...wrongList]);
-    tasks.push({
-      type: 'multi',
-      instruction: 'Выберите ВСЕ ПРОСТЫЕ высказывания (без логических связок).',
-      options: all,
-      correct: correctList,
-      explain: 'Простое высказывание содержит одно суждение, без И, ИЛИ, НЕ, ЕСЛИ...ТО.'
-    });
-  }
-  // 11: все составные
-  {
-    const correctList = pickN(COMPOUND_STATEMENTS, 3);
-    const wrongList = pickN([...SIMPLE_STATEMENTS, ...NON_STATEMENTS], 3);
-    const all = shuffle([...correctList, ...wrongList]);
-    tasks.push({
-      type: 'multi',
-      instruction: 'Выберите ВСЕ СОСТАВНЫЕ высказывания (содержат И, ИЛИ, НЕ, ЕСЛИ...ТО).',
-      options: all,
-      correct: correctList,
-      explain: 'Составное высказывание строится из простых с помощью логических связок.'
-    });
+  /* ---------- БЛОК 3: Мультивыбор (6 заданий = 3 типа × 2) ---------- */
+  for (let rep = 0; rep < 2; rep++) {
+    // 3.1: все высказывания
+    {
+      const correctList = pickN([...STATEMENTS, ...SIMPLE_STATEMENTS, ...COMPOUND_STATEMENTS], 3);
+      const wrongList = pickN(NON_STATEMENTS, 3);
+      const all = shuffle([...correctList, ...wrongList]);
+      tasks.push({
+        type: 'multi',
+        instruction: 'Выберите ВСЕ высказывания (то, о чём можно сказать «истинно» или «ложно»).',
+        options: all,
+        correct: correctList,
+        explain: 'Вопросы и побуждения — не высказывания, потому что их нельзя оценить как истинные или ложные.'
+      });
+    }
+    // 3.2: все простые
+    {
+      const correctList = pickN(SIMPLE_STATEMENTS, 3);
+      const wrongList = pickN([...COMPOUND_STATEMENTS, ...NON_STATEMENTS], 3);
+      const all = shuffle([...correctList, ...wrongList]);
+      tasks.push({
+        type: 'multi',
+        instruction: 'Выберите ВСЕ ПРОСТЫЕ высказывания (без логических связок).',
+        options: all,
+        correct: correctList,
+        explain: 'Простое высказывание содержит одно суждение, без И, ИЛИ, НЕ, ЕСЛИ...ТО.'
+      });
+    }
+    // 3.3: все составные
+    {
+      const correctList = pickN(COMPOUND_STATEMENTS, 3);
+      const wrongList = pickN([...SIMPLE_STATEMENTS, ...NON_STATEMENTS], 3);
+      const all = shuffle([...correctList, ...wrongList]);
+      tasks.push({
+        type: 'multi',
+        instruction: 'Выберите ВСЕ СОСТАВНЫЕ высказывания (содержат И, ИЛИ, НЕ, ЕСЛИ...ТО).',
+        options: all,
+        correct: correctList,
+        explain: 'Составное высказывание строится из простых с помощью логических связок.'
+      });
+    }
   }
 
-  /* ---------- БЛОК 4: Слова и буквы (7 заданий) ---------- */
+  /* ---------- БЛОК 4: Слова и буквы (14 заданий) ---------- */
   const wordConds = [
     { key: 'first_vowel',     text: '(Первая буква гласная)' },
     { key: 'first_cons',      text: '(Первая буква согласная)' },
@@ -208,7 +221,7 @@ function generateTasks() {
     return false;
   }
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 14; i++) {
     let attempts = 0;
     let created = null;
     while (attempts < 50 && !created) {
@@ -234,7 +247,7 @@ function generateTasks() {
     else i--;
   }
 
-  /* ---------- БЛОК 5: Цифры (7 заданий) ---------- */
+  /* ---------- БЛОК 5: Цифры (14 заданий) ---------- */
   const digitConds = [
     { text: '(Первая цифра чётная) и (Вторая цифра чётная)',
       fn: s => +s[0] % 2 === 0 && +s[1] % 2 === 0 },
@@ -262,7 +275,7 @@ function generateTasks() {
     return '' + randInt(1, 9) + randInt(0, 9) + randInt(0, 9) + randInt(0, 9);
   }
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 14; i++) {
     let attempts = 0;
     let created = null;
     while (attempts < 100 && !created) {
@@ -293,57 +306,86 @@ function generateTasks() {
     else i--;
   }
 
-  /* ---------- БЛОК 6: Наибольшее/наименьшее X (5 заданий) ---------- */
+  /* ---------- БЛОК 6: Наибольшее/наименьшее X (10 заданий) ----------
+     5 шаблонов, каждый прогоняется дважды с новыми числами.
+     Выражение отдаётся структурой `expr`, чтобы части с «НЕ»
+     можно было сделать интерактивными.
+     ------------------------------------------------------------ */
   const xTemplates = [
-    // Наибольшее: (X >= A) И НЕ (X > B) → max = B
+    // (X >= A) И НЕ (X > B) → max = B
     () => {
       const A = randInt(-10, 20);
       const B = A + randInt(3, 15);
       return {
-        instruction: `Напишите наибольшее целое число x, для которого истинно высказывание:\n\n(X >= ${A}) И НЕ (X > ${B})`,
+        prefix: 'Напишите наибольшее целое число x, для которого истинно высказывание:',
+        expr: [
+          { cmp: { op: '>=', val: A } },
+          { text: ' И ' },
+          { not: { cmp: { op: '>', val: B } } }
+        ],
         correct: String(B),
         explain: `(X >= ${A}) И НЕ (X > ${B}) ⇒ ${A} ≤ X ≤ ${B}. Наибольшее целое — ${B}.`
       };
     },
-    // Наибольшее: (X > A) И (X < B) → max = B - 1
+    // (X > A) И (X < B) → max = B - 1
     () => {
       const A = randInt(-10, 20);
       const B = A + randInt(3, 15);
       return {
-        instruction: `Напишите наибольшее целое число x:\n\n(X > ${A}) И (X < ${B})`,
+        prefix: 'Напишите наибольшее целое число x:',
+        expr: [
+          { cmp: { op: '>', val: A } },
+          { text: ' И ' },
+          { cmp: { op: '<', val: B } }
+        ],
         correct: String(B - 1),
         explain: `(X > ${A}) И (X < ${B}) ⇒ ${A} < X < ${B}. Наибольшее целое — ${B - 1}.`
       };
     },
-    // Наименьшее: (X > A) И НЕ (X < B) → min = max(A+1, B)
+    // (X > A) И НЕ (X < B) → min = max(A+1, B)
     () => {
       const A = randInt(-10, 20);
       const B = A + randInt(3, 15);
       const minX = Math.max(A + 1, B);
       return {
-        instruction: `Напишите наименьшее целое число x:\n\n(X > ${A}) И НЕ (X < ${B})`,
+        prefix: 'Напишите наименьшее целое число x:',
+        expr: [
+          { cmp: { op: '>', val: A } },
+          { text: ' И ' },
+          { not: { cmp: { op: '<', val: B } } }
+        ],
         correct: String(minX),
         explain: `(X > ${A}) И НЕ (X < ${B}) ⇒ X > ${A} и X ≥ ${B}. Наименьшее целое — ${minX}.`
       };
     },
-    // Наименьшее: (X >= A) И (X > B) → min = max(A, B+1)
+    // (X >= A) И (X > B) → min = max(A, B+1)
     () => {
       const A = randInt(-10, 20);
       const B = A + randInt(3, 15);
       const minX = Math.max(A, B + 1);
       return {
-        instruction: `Напишите наименьшее целое число x:\n\n(X >= ${A}) И (X > ${B})`,
+        prefix: 'Напишите наименьшее целое число x:',
+        expr: [
+          { cmp: { op: '>=', val: A } },
+          { text: ' И ' },
+          { cmp: { op: '>', val: B } }
+        ],
         correct: String(minX),
         explain: `(X >= ${A}) И (X > ${B}) ⇒ X ≥ ${A} и X > ${B}. Наименьшее целое — ${minX}.`
       };
     },
-    // Наибольшее: (X < A) И (X <= B) → max = min(A,B) - 1
+    // (X < A) И (X <= B) → max = min(A,B) - 1
     () => {
       const A = randInt(-10, 20);
       const B = A + randInt(3, 15);
       const maxX = Math.min(A, B) - 1;
       return {
-        instruction: `Напишите наибольшее целое число x:\n\n(X < ${A}) И (X <= ${B})`,
+        prefix: 'Напишите наибольшее целое число x:',
+        expr: [
+          { cmp: { op: '<', val: A } },
+          { text: ' И ' },
+          { cmp: { op: '<=', val: B } }
+        ],
         correct: String(maxX),
         explain: `X < ${A} и X ≤ ${B} ⇒ X < ${Math.min(A, B)}. Наибольшее целое — ${maxX}.`
       };
@@ -351,16 +393,18 @@ function generateTasks() {
   ];
 
   const orderIdx = shuffle([...Array(xTemplates.length).keys()]);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     const t = xTemplates[orderIdx[i % xTemplates.length]]();
     tasks.push({
       type: 'input',
-      instruction: t.instruction,
+      prefix: t.prefix,
+      expr: t.expr,
       correct: t.correct,
       explain: t.explain
     });
   }
 
+  // ИТОГО: 8 + 8 + 6 + 14 + 14 + 10 = 60 заданий
   return tasks;
 }
 
@@ -416,7 +460,55 @@ function updateProgress(done) {
 }
 
 /* ==========================================================
-   ОТРИСОВКА
+   ОТРИСОВКА ВЫРАЖЕНИЯ С X
+   ========================================================== */
+
+function renderExpr(expr) {
+  const wrap = document.createElement('div');
+  wrap.className = 'expr';
+
+  expr.forEach(part => {
+    if (part.text != null) {
+      wrap.appendChild(document.createTextNode(part.text));
+      return;
+    }
+
+    if (part.cmp) {
+      const s = document.createElement('span');
+      s.className = 'cmp-part';
+      s.textContent = `(X ${part.cmp.op} ${part.cmp.val})`;
+      wrap.appendChild(s);
+      return;
+    }
+
+    if (part.not) {
+      const cmp = part.not.cmp;
+      const flipped = OPPOSITE_CMP[cmp.op] || cmp.op;
+
+      const notSpan = document.createElement('span');
+      notSpan.className = 'not-part';
+      notSpan.title = 'Нажмите, чтобы зачеркнуть НЕ и поменять знак';
+      notSpan.innerHTML =
+        `<span class="not-word">НЕ</span> ` +
+        `<span class="not-paren">(</span>` +
+        `<span class="not-cmp-orig">X ${cmp.op} ${cmp.val}</span>` +
+        `<span class="not-cmp-flipped">X ${flipped} ${cmp.val}</span>` +
+        `<span class="not-paren">)</span>`;
+
+      notSpan.addEventListener('click', () => {
+        if (state.answered || notSpan.classList.contains('locked')) return;
+        notSpan.classList.toggle('crossed');
+      });
+
+      wrap.appendChild(notSpan);
+    }
+  });
+
+  return wrap;
+}
+
+/* ==========================================================
+   ОТРИСОВКА ЗАДАНИЯ
    ========================================================== */
 
 function renderTask() {
@@ -424,7 +516,6 @@ function renderTask() {
   state.answered = false;
   state.selection = null;
 
-  el.instruction.textContent = q.instruction;
   el.taskBody.innerHTML = '';
   setFeedback('', '');
 
@@ -435,9 +526,15 @@ function renderTask() {
 
   updateProgress(false);
 
-  if (q.type === 'choice')      renderChoice(q);
-  else if (q.type === 'multi')  renderMulti(q);
-  else if (q.type === 'input')  renderInput(q);
+  if (q.type === 'choice') {
+    el.instruction.textContent = q.instruction;
+    renderChoice(q);
+  } else if (q.type === 'multi') {
+    el.instruction.textContent = q.instruction;
+    renderMulti(q);
+  } else if (q.type === 'input') {
+    renderInput(q);
+  }
 }
 
 function renderChoice(q) {
@@ -483,6 +580,21 @@ function renderMulti(q) {
 }
 
 function renderInput(q) {
+  // Инструкция — только текстовое условие (без самого выражения)
+  el.instruction.textContent = q.prefix || q.instruction || '';
+
+  // Выражение с X — отдельным блоком, с интерактивными «НЕ»
+  if (q.expr) {
+    const hasNot = q.expr.some(p => p.not);
+    if (hasNot) {
+      const hint = document.createElement('div');
+      hint.className = 'expr-hint';
+      hint.innerHTML = '💡 Нажмите на <b>НЕ</b>, чтобы зачеркнуть его и поменять знак сравнения.';
+      el.taskBody.appendChild(hint);
+    }
+    el.taskBody.appendChild(renderExpr(q.expr));
+  }
+
   const wrap = document.createElement('div');
   wrap.className = 'input-wrap';
 
@@ -538,6 +650,8 @@ function markInput(q) {
     input.classList.add('wrong');
     input.value = q.correct;
   }
+  // Блокируем «НЕ» после ответа
+  el.taskBody.querySelectorAll('.not-part').forEach(n => n.classList.add('locked'));
 }
 
 function checkAnswer() {
