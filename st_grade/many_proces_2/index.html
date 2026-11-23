@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Многопроцессорные системы</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <button class="btn-help" id="helpBtn" type="button" title="Открыть шпаргалку">❓ Справка</button>
+    <h1>🖥️ Многопроцессорные системы</h1>
+    <p class="app-subtitle">Подготовка к заданию 22 ЕГЭ</p>
+    <div class="progress-wrap">
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="screen-quiz">
+      <div class="task">
+        <p class="instruction" id="instruction"></p>
+        
+        <div class="theory-box" id="theoryBox" hidden></div>
+
+        <div class="calc-window">
+          <div class="calc-menu-bar">
+            <span>Файл</span><span>Правка</span><span>Вид</span><span>Вставка</span><span>Формат</span>
+            <span>Стили</span><span>Лист</span>
+            <span class="calc-menu-item" id="menuData">Данные ▾</span>
+            <span>Сервис</span><span>Окно</span><span>Справка</span>
+          </div>
+          <div class="dropdown-menu" id="dropdownData" hidden>
+            <button class="dropdown-item" id="btnTextToColumns">Текст по столбцам...</button>
+          </div>
+          
+          <div class="calc-toolbar">
+            <div class="calc-toolbar-btn">📄</div>
+            <div class="calc-toolbar-btn">💾</div>
+            <div class="calc-toolbar-btn">🖨️</div>
+            <div class="calc-separator"></div>
+            <div class="calc-toolbar-btn">↕ Сортировка</div>
+            <div class="calc-toolbar-btn">🔽 Фильтр</div>
+          </div>
+          
+          <div class="calc-formula-bar">
+            <span class="cell-ref" id="cellRef">A1</span>
+            <span class="fx">f(x)</span>
+            <input type="text" class="formula-input" readonly value="" id="formulaBarDisplay">
+          </div>
+
+          <div class="calc-grid-container">
+            <table class="calc-table" id="calcTable"></table>
+          </div>
+          
+          <div class="calc-status-bar">
+            <span id="statusBarText">Готово</span>
+          </div>
+        </div>
+
+        <div class="formula-input-area" id="formulaInputArea" hidden>
+          <label id="formulaLabel" style="font-weight: 600; display: block; margin-bottom: 8px;">Введите формулу для ячейки:</label>
+          <input type="text" id="userFormulaInput" class="input-answer" placeholder="=..." style="font-family: monospace; text-transform: uppercase;" autocomplete="off">
+          <div id="formulaHint" class="hint-text" style="margin-top: 8px; color: var(--muted); font-size: 14px;"></div>
+        </div>
+
+        <p class="feedback" id="feedback"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="checkBtn" type="button">Проверить</button>
+          <button class="btn btn-success" id="nextBtn" type="button" hidden>Далее →</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-result" hidden>
+      <div class="task finish">
+        <div class="finish-emoji" id="finishEmoji">🎉</div>
+        <h2 id="finishTitle">Модуль пройден!</h2>
+        <p id="finishText"></p>
+        <div class="actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Пройти заново</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО МАСТЕРА "ТЕКСТ ПО СТОЛБЦАМ" -->
+<div class="modal-overlay" id="wizardModal" hidden>
+  <div class="modal-content calc-modal">
+    <div class="modal-header"><h3>Мастер распределения текста по столбцам</h3></div>
+    <div class="wizard-step" id="step1">
+      <p>Выберите формат данных:</p>
+      <label class="radio-label"><input type="radio" name="format" value="delimited" checked> С разделителями</label>
+      <label class="radio-label"><input type="radio" name="format" value="fixed"> Фиксированной ширины</label>
+    </div>
+    <div class="wizard-step" id="step2" hidden>
+      <p>Выберите разделители:</p>
+      <div class="checkbox-group">
+        <label class="checkbox-label"><input type="checkbox" id="delimTab"> Табуляция</label>
+        <label class="checkbox-label"><input type="checkbox" id="delimSemicolon"> Точка с запятой (;)</label>
+        <label class="checkbox-label"><input type="checkbox" id="delimComma"> Запятая (,)</label>
+        <label class="checkbox-label"><input type="checkbox" id="delimSpace"> Пробел</label>
+      </div>
+    </div>
+    <div class="wizard-step" id="step3" hidden>
+      <p>Настройте типы столбцов (оставьте по умолчанию) и нажмите «Готово».</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="wizardCancel">Отмена</button>
+      <button class="btn btn-outline" id="wizardBack" hidden>Назад</button>
+      <button class="btn btn-primary" id="wizardNext">Далее</button>
+      <button class="btn btn-success" id="wizardFinish" hidden>Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ФИЛЬТРА (как в LibreOffice Calc) -->
+<div class="modal-overlay" id="filterModal" hidden>
+  <div class="modal-content filter-modal">
+    <div class="modal-header">
+      <h3>Фильтр по столбцу <span id="filterColName">H</span></h3>
+      <button class="modal-close" id="filterModalClose" style="position:static;background:none;border:none;font-size:22px;cursor:pointer;">&times;</button>
+    </div>
+    <div class="filter-modal-body">
+      <label class="radio-label"><input type="radio" name="filterMode" value="all" checked> Все значения</label>
+      <label class="radio-label"><input type="radio" name="filterMode" value="value"> Равно значению...</label>
+      <div class="filter-value-row" hidden>
+        <select id="filterValueSelect" class="filter-select-calc"></select>
+      </div>
+      <label class="radio-label"><input type="radio" name="filterMode" value="condition"> По условию...</label>
+      <div class="filter-condition-row" hidden>
+        <select id="filterOpSelect2" class="filter-select-calc">
+          <option value="<=">≤</option>
+          <option value=">=">≥</option>
+          <option value="=">=</option>
+          <option value="<"><</option>
+          <option value=">">></option>
+        </select>
+        <input type="number" id="filterCondValue" placeholder="Число" style="width:100px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="filterResetBtn">Сбросить фильтр</button>
+      <button class="btn btn-outline" id="filterCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="filterApplyBtn">Применить</button>
+    </div>
+  </div>
+</div>
+
+<!-- СПРАВКА -->
+<div class="modal-overlay" id="helpModal" hidden>
+  <div class="modal-content">
+    <button class="modal-close" id="closeHelpBtn" title="Закрыть">&times;</button>
+    <h2>📖 Шпаргалка</h2>
+    <div class="help-section">
+      <h3>Синтаксис ВПР</h3>
+      <p><b>ВПР(что_ищем; где_ищем; номер_столбца; 0)</b><br>
+      1. <b>Что ищем</b> — ID зависимости (C2 или D2).<br>
+      2. <b>Где ищем</b> — <code>$A:$H</code>.<br>
+      3. <b>Номер столбца</b> — 8 (H).<br>
+      4. <b>0</b> — точное совпадение.</p>
+    </div>
+    <div class="help-section">
+      <h3>Правила времени</h3>
+      <p><b>Конец (H):</b> B + МАКС(E:F)<br>
+      <b>Начало (G):</b> H − B + 1<br>
+      <b>Длительность:</b> H − G + 1</p>
+    </div>
+    <div class="help-section">
+      <h3>Сортировка и фильтр</h3>
+      <p><b>Сортировка:</b> клик по заголовку упорядочивает строки.<br>
+      <b>Фильтр:</b> клик по заголовку → выбрать условие → применить.</p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
