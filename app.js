@@ -29,6 +29,13 @@ const GRADES = [
         desc: 'Типы файлов, категории расширений и соответствия.',
         emoji: '📁',
         path: '7grade/second/file_ext/index.html'
+      }, 
+      {
+        quarter: 'II четверть',
+        title: 'Адрес файла в сети Интернет',
+        desc: 'Составляющие полного адреса файла и его правильное написание.',
+        emoji: '📁',
+        path: '7grade/second/file_adress/index.html'
       }
     ]
   },
