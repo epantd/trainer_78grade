@@ -63,6 +63,13 @@ const GRADES = [
         desc: 'Что такое высказывание, простые и составные, отрицание.',
         emoji: '🧠',
         path: '8grade/second/logic/index.html'
+      },
+      {
+        quarter: 'II четверть',
+        title: 'Логические элементы',
+        desc: 'Решение задач с различными логическими элементами с помощью кругов Эйлера-Венна.',
+        emoji: '⭕',
+        path: '8grade/second/logic_element/index.html'
       }
     ]
   },
