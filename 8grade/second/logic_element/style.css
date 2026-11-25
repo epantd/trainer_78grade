@@ -1,0 +1,188 @@
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #eef2f9;
+  --card-bg: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #4f6ef7;
+  --accent-dark: #3b57d6;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --border: #dbe3ef;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(30, 41, 59, .08);
+}
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: radial-gradient(1200px 600px at 50% -10%, #e0e9ff 0%, var(--bg) 45%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 16px 60px;
+}
+
+.app { max-width: 850px; margin: 0 auto; }
+.app-header { text-align: center; margin-bottom: 24px; }
+.app-header h1 { font-size: clamp(22px, 4vw, 32px); margin: 0 0 8px; }
+.app-subtitle { color: var(--muted); font-size: 15px; margin: 0 0 20px; }
+
+.progress-wrap { max-width: 420px; margin: 0 auto; }
+.progress-text { font-size: 14px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+.progress-bar { height: 10px; background: #dbe3f2; border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #6a8bff, var(--accent)); border-radius: 999px; transition: width .35s ease; }
+
+/* ---------- Карточка задания ---------- */
+.task { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.instruction { margin: 0 0 18px; font-size: 16px; line-height: 1.6; color: #334155; white-space: pre-line; }
+.instruction b { color: var(--accent-dark); }
+
+/* Таблички */
+.data-table { border-collapse: collapse; margin: 10px auto 20px; width: 100%; max-width: 400px; font-size: 15px; }
+.data-table th, .data-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; }
+.data-table th { background: #f5f8ff; font-weight: 600; }
+
+/* Варианты */
+.options { display: grid; gap: 10px; margin-bottom: 18px; }
+.option { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 16px; color: var(--text); background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 13px 16px; cursor: pointer; transition: all .15s; }
+.option:hover:not(:disabled) { border-color: var(--accent); background: #f7f9ff; }
+.option.selected { border-color: var(--accent); background: #eef3ff; box-shadow: 0 0 0 3px rgba(79, 110, 247, .18); }
+.option.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); font-weight: 700; }
+.option.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); font-weight: 700; }
+
+/* Ввод текста */
+.input-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 18px; }
+.input-answer { width: 100%; max-width: 300px; font-family: 'Consolas', monospace; font-size: 20px; text-align: center; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border); outline: none; transition: all .15s; }
+.input-answer:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 110, 247, .18); }
+.input-answer.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); font-weight: 700; }
+.input-answer.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); font-weight: 700; }
+
+/* Круги Эйлера (SVG) */
+.venn-container { display: flex; justify-content: center; margin-bottom: 20px; }
+.venn-svg { width: 100%; max-width: 400px; height: auto; }
+.venn-region { cursor: pointer; transition: fill .15s; fill: rgba(79, 110, 247, 0.05); stroke: #cbd5e1; stroke-width: 2; }
+.venn-region:hover { fill: rgba(79, 110, 247, 0.2); }
+.venn-region.selected { fill: rgba(79, 110, 247, 0.5); stroke: var(--accent); }
+.venn-region.ok { fill: rgba(22, 163, 74, 0.4); stroke: var(--green); pointer-events: none; }
+.venn-region.wrong { fill: rgba(220, 38, 38, 0.4); stroke: var(--red); pointer-events: none; }
+.venn-region.missed { fill: rgba(220, 38, 38, 0.2); stroke: var(--red); stroke-dasharray: 5; pointer-events: none; }
+.venn-text { font-family: sans-serif; font-size: 16px; font-weight: bold; fill: #334155; pointer-events: none; user-select: none; }
+.venn-label { font-family: sans-serif; font-size: 18px; font-weight: bold; fill: #1e293b; pointer-events: none; }
+
+/* Мультивыбор */
+.palette { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 18px; padding: 12px; background: #f5f8ff; border: 1px dashed #c7d5f0; border-radius: 12px; }
+.card { padding: 10px 16px; background: #fff; border: 1px solid #cfd9ee; border-radius: 10px; font-size: 16px; cursor: pointer; transition: all .15s; }
+.card.selected { border-color: var(--accent); background: #eef3ff; box-shadow: 0 0 0 3px rgba(79, 110, 247, .25); }
+.card.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); font-weight: 700; }
+.card.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); font-weight: 700; }
+
+/* Пошаговые задачи */
+.step-box { background: #f8fafc; border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+.step-box h4 { margin: 0 0 10px; font-size: 15px; color: var(--accent-dark); }
+.step-inputs { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.step-inputs input { padding: 8px 12px; font-size: 16px; border: 2px solid var(--border); border-radius: 8px; width: 120px; text-align: center; font-family: monospace; }
+.step-inputs input.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); font-weight: bold; }
+.step-inputs input.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); font-weight: bold; }
+
+/* Обратная связь и кнопки */
+.feedback { text-align: center; font-size: 15px; font-weight: 600; margin: 6px 0 16px; min-height: 22px; white-space: pre-line; }
+.feedback.success { color: var(--green); }
+.feedback.error { color: var(--red); }
+.feedback.warn { color: var(--amber); }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.btn { font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 26px; border-radius: 12px; border: 1px solid transparent; cursor: pointer; transition: all .15s; }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 6px 16px rgba(79, 110, 247, .35); }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-success { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(22, 163, 74, .3); }
+.btn-success:hover { background: #15803d; }
+.btn-outline { background: #fff; color: var(--accent-dark); border-color: #c7d5f0; }
+
+/* Финал */
+.finish { text-align: center; padding: 48px 24px; }
+.finish-emoji { font-size: 56px; margin-bottom: 12px; }
+
+/* Множественные поля ввода */
+.multi-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.multi-input-row label { flex: 1; font-size: 15px; color: #334155; }
+.multi-input {
+  width: 140px;
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 15px;
+  border: 2px solid #dbe3ef;
+  border-radius: 8px;
+  text-align: center;
+  outline: none;
+}
+.multi-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 110, 247, .18); }
+.multi-input.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); font-weight: 700; }
+.multi-input.wrong { border-color: var(--red); background: var(--red-bg); color: var(--red); font-weight: 700; }
+
+/* Таблица с полями ввода */
+.table-with-inputs {
+  width: 100%;
+  max-width: 650px;
+  border-collapse: collapse;
+  margin: 12px auto 16px;
+  font-size: 14px;
+}
+.table-with-inputs th, .table-with-inputs td {
+  border: 1px solid #dbe3ef;
+  padding: 8px 10px;
+  text-align: left;
+}
+.table-with-inputs th { background: #f1f5fd; font-weight: 600; text-align: center; }
+.table-with-inputs td.center { text-align: center; }
+.table-with-inputs input {
+  width: 150px;
+  padding: 6px 8px;
+  font-family: monospace;
+  border: 2px solid #dbe3ef;
+  border-radius: 6px;
+  text-align: center;
+  outline: none;
+}
+.table-with-inputs input:focus { border-color: var(--accent); }
+.table-with-inputs input.ok { border-color: var(--green); background: var(--green-bg); font-weight: bold; }
+.table-with-inputs input.wrong { border-color: var(--red); background: var(--red-bg); font-weight: bold; }
+
+/* Блоки-шаги */
+.step-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.step-box h4 { margin: 0 0 8px; font-size: 14px; color: var(--accent-dark); }
+.step-box input {
+  padding: 8px 12px;
+  font-family: monospace;
+  border: 2px solid #dbe3ef;
+  border-radius: 8px;
+  text-align: center;
+  outline: none;
+  width: 160px;
+}
+.step-box input:focus { border-color: var(--accent); }
+.step-box input.ok { border-color: var(--green); background: var(--green-bg); }
+.step-box input.wrong { border-color: var(--red); background: var(--red-bg); }
